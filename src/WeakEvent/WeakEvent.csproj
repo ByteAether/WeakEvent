@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net9.0;net6.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<RootNamespace>ByteAether.WeakEvent</RootNamespace>
+	
+	<Deterministic>True</Deterministic>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	<IncludeSymbols>True</IncludeSymbols>
+	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	
+	<Title>WeakEvent</Title>
+	<Authors>Joonatan Uusväli</Authors>
+	<Company>ByteAether</Company>
+	<Description>Weakly referenced event subscribers. Keep your .NET events lean and memory-safe.</Description>
+	<PackageProjectUrl>https://github.com/ByteAether/WeakEvent</PackageProjectUrl>
+	<RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
+	
+	<PackageId>ByteAether.WeakEvent</PackageId>
+	<PackageTags>weak;event;manager;handler;weak-event;weak-event-manager;weak-event-handler;WeakEvent;WeakEventManager;WeakEventHandler;blazor</PackageTags>
+	<PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+	<PackageLicenseFile>LICENSE</PackageLicenseFile>
+	<PackageIcon>logo.png</PackageIcon>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="PACKAGE.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+	<None Include="..\..\assets\logo.png">
+	  <Pack>True</Pack>
+	  <PackagePath>\</PackagePath>
+	</None>
+  </ItemGroup>
+
+</Project>
