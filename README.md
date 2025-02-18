@@ -53,7 +53,7 @@ var subscriber = () => Console.WriteLine("Event received!");
 myEvent.Subscribe(subscriber);
 
 // Raise the event
-myEvent.Send();
+await myEvent.SendAsync();
 ```
 
 ### Using the `WeakEvent<TEvent>`
@@ -69,7 +69,7 @@ var subscriber = (MyEventData data) => Console.WriteLine("Received: " + data.Mes
 myEvent.Subscribe(subscriber);
 
 // Raise the event
-myEvent.Send(new MyEventData("Hello, World!"));
+await myEvent.SendAsync(new MyEventData("Hello, World!"));
 
 // Define your event data
 public record MyEventData(string Message);
@@ -78,19 +78,23 @@ public record MyEventData(string Message);
 ## API
 
 ### `WeakEvent<TEvent>`
- * `Subscribe(Action<TEvent> handler)`
+ * `Subscribe(Action<TEvent> handler)`\
+   `Subscribe(Func<TEvent, Task> handler)`
     * Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
- * `Unsubscribe(Action<TEvent> handler)`
+ * `Unsubscribe(Action<TEvent> handler)`\
+   `Unsubscribe(Func<TEvent, Task> handler)`
    * Unsubscribes the specified handler from the event.
- * `Send(TEvent eventData)`
+ * `SendAsync(TEvent eventData)`
    * Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ### `WeakEvent`
- * `Subscribe(Action handler)`
+ * `Subscribe(Action handler)`\
+   `Subscribe(Func<Task> handler)`
    * Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
- * `Unsubscribe(Action handler)`
+ * `Unsubscribe(Action handler)`\
+   `Unsubscribe(Func<Task> handler)`
    * Unsubscribes the specified handler from the event.
- * `Send()`
+ * `SendAsync()`
     * Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ## Contributing
