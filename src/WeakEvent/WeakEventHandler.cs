@@ -2,94 +2,64 @@
 
 namespace ByteAether.WeakEvent;
 
-internal readonly struct WeakEventHandler<TEvent>
+internal readonly struct WeakEventHandler<TEvent>(Delegate handler)
 {
-	private readonly WeakReference? _target;
-	private readonly MethodInfo? _method;
-	private readonly Action<TEvent>? _staticHandler;
+	private readonly WeakReference? _weakTarget = handler.Target != null ? new WeakReference(handler.Target) : null;
+	private readonly MethodInfo _method = handler.Method;
 
-	public WeakEventHandler(Action<TEvent> handler)
+	public bool IsAlive => _weakTarget == null || _weakTarget.Target != null;
+
+	public Task InvokeAsync(TEvent eventData)
 	{
-		// If the handler is a static method, there is no target.
-		if (handler.Target == null)
+		if (!IsAlive)
 		{
-			_staticHandler = handler;
+			return Task.CompletedTask;
+		}
+
+		var target = _weakTarget?.Target;
+
+		if (_method.ReturnType == typeof(Task))
+		{
+			return (Task)_method.Invoke(target, [eventData])!;
 		}
 		else
 		{
-			_target = new WeakReference(handler.Target);
-			_method = handler.Method;
+			_method.Invoke(target, [eventData]);
+			return Task.CompletedTask;
 		}
 	}
 
-	public Action<TEvent>? GetHandler()
-	{
-		if (_staticHandler != null)
-		{
-			return _staticHandler;
-		}
-
-		var target = _target!.Target;
-		if (target != null)
-		{
-			// Recreate a delegate with the target and stored method.
-			return (Action<TEvent>)Delegate.CreateDelegate(
-				typeof(Action<TEvent>), target, _method!);
-		}
-
-		return null;
-	}
-
-	public bool Matches(Action<TEvent> handler)
-	{
-		return handler.Target == null
-			? _staticHandler != null && _staticHandler.Equals(handler)
-			: _target?.Target == handler.Target && _method!.Equals(handler.Method);
-	}
+	public bool Matches(Delegate handler)
+		=> _weakTarget?.Target == handler.Target && _method.Equals(handler.Method);
 }
 
-internal readonly struct WeakEventHandler
+internal readonly struct WeakEventHandler(Delegate handler)
 {
-	private readonly WeakReference? _target;
-	private readonly MethodInfo? _method;
-	private readonly Action? _staticHandler;
+	private readonly WeakReference? _weakTarget = handler.Target != null ? new WeakReference(handler.Target) : null;
+	private readonly MethodInfo _method = handler.Method;
 
-	public WeakEventHandler(Action handler)
+	public bool IsAlive => _weakTarget == null || _weakTarget.Target != null;
+
+	public Task InvokeAsync()
 	{
-		// If the handler is a static method, there is no target.
-		if (handler.Target == null)
+		if (!IsAlive)
 		{
-			_staticHandler = handler;
+			return Task.CompletedTask;
+		}
+
+		var target = _weakTarget?.Target;
+
+		if (_method.ReturnType == typeof(Task))
+		{
+			return (Task)_method.Invoke(target, [])!;
 		}
 		else
 		{
-			_target = new WeakReference(handler.Target);
-			_method = handler.Method;
+			_method.Invoke(target, []);
+			return Task.CompletedTask;
 		}
 	}
 
-	public Action? GetHandler()
-	{
-		if (_staticHandler != null)
-		{
-			return _staticHandler;
-		}
-
-		var target = _target!.Target;
-		if (target != null)
-		{
-			// Recreate a delegate with the target and stored method.
-			return (Action)Delegate.CreateDelegate(
-				typeof(Action), target, _method!);
-		}
-
-		return null;
-	}
-
-	public bool Matches(Action handler)
-	{
-		return handler.Target == null
-			? _staticHandler != null && _staticHandler.Equals(handler)
-			: _target?.Target == handler.Target && _method!.Equals(handler.Method);
-	}
+	public bool Matches(Delegate handler)
+		=> _weakTarget?.Target == handler.Target && _method.Equals(handler.Method);
 }

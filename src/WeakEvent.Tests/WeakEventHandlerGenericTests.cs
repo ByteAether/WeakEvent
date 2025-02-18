@@ -2,75 +2,146 @@
 public class WeakEventHandlerGenericTests
 {
 	[Fact]
-	public void StaticHandler_GetHandler_ReturnsHandlerAndMatches()
+	public void Constructor_NullDelegate_ThrowsException()
 	{
-		Action<string> handler = StaticHandler;
-		var weh = new WeakEventHandler<string>(handler);
+		// Arrange
+		Action<string> handler = null!;
 
-		var retrieved = weh.GetHandler();
-		Assert.NotNull(retrieved);
-		retrieved("Hello");
-		Assert.Equal("Hello", _staticResult);
+		// Act & Assert
+		Assert.Throws<NullReferenceException>(() => new WeakEventHandler<string>(handler));
+	}
 
-		Assert.True(weh.Matches(handler));
+	[Fact]
+	public async Task StaticHandler_InvokeAsync_Void()
+	{
+		// Arrange
+		_staticResult = string.Empty;
+		var weakHandler = new WeakEventHandler<string>(StaticHandler);
 
-		// Create a new delegate instance for the same static method.
-		Action<string> newDelegate = StaticHandler;
-		Assert.True(weh.Matches(newDelegate));
+		// Act
+		await weakHandler.InvokeAsync("TestStatic");
+
+		// Assert
+		Assert.Equal("TestStatic", _staticResult);
+		Assert.True(weakHandler.IsAlive);
 	}
 
 	private static string _staticResult = string.Empty;
-
-	private static void StaticHandler(string msg)
+	private static void StaticHandler(string data)
 	{
-		_staticResult = msg;
+		_staticResult = data;
 	}
 
 	[Fact]
-	public void InstanceHandler_GetHandler_ReturnsHandlerAndMatches()
+	public async Task InstanceHandler_InvokeAsync_Void()
 	{
-		var instance = new InstanceTest();
-		Action<string> handler = instance.Handler;
-		var weh = new WeakEventHandler<string>(handler);
+		// Arrange
+		var subscriber = new Subscriber();
+		var weakHandler = new WeakEventHandler<string>(subscriber.InstanceHandler);
 
-		var retrieved = weh.GetHandler();
-		Assert.NotNull(retrieved);
-		retrieved("World");
-		Assert.Equal("World", instance.Result);
+		// Act
+		await weakHandler.InvokeAsync("InstanceTest");
 
-		Assert.True(weh.Matches(handler));
-
-		// Create a new delegate instance from the same instance method.
-		Action<string> newDelegate = instance.Handler;
-		Assert.True(weh.Matches(newDelegate));
+		// Assert
+		Assert.Equal("InstanceTest", subscriber.LastReceived);
+		Assert.True(weakHandler.IsAlive);
 	}
 
 	[Fact]
-	public void InstanceHandler_GetHandler_ReturnsNullAfterGC()
+	public async Task InstanceHandler_InvokeAsync_Async()
 	{
-		CreateWeakInstance(out var weh);
+		// Arrange
+		var subscriber = new Subscriber();
+		var weakHandler = new WeakEventHandler<string>(subscriber.AsyncHandler);
+
+		// Act
+		await weakHandler.InvokeAsync("AsyncTest");
+
+		// Assert
+		Assert.Equal("AsyncTest", subscriber.LastReceived);
+		Assert.True(weakHandler.IsAlive);
+	}
+
+	[Fact]
+	public void Matches_ReturnsTrueForSameDelegate()
+	{
+		// Arrange
+		var subscriber = new Subscriber();
+		var weakHandler = new WeakEventHandler<string>(subscriber.InstanceHandler);
+
+		// Act
+		var result = weakHandler.Matches(subscriber.InstanceHandler);
+
+		// Assert
+		Assert.True(result);
+	}
+
+	[Fact]
+	public void Matches_ReturnsFalseForDifferentDelegate()
+	{
+		// Arrange
+		var subscriber1 = new Subscriber();
+		var subscriber2 = new Subscriber();
+		var weakHandler = new WeakEventHandler<string>(subscriber1.InstanceHandler);
+
+		// Act
+		var result = weakHandler.Matches(subscriber2.InstanceHandler);
+
+		// Assert
+		Assert.False(result);
+	}
+
+	[Fact]
+	public async Task InvokeAsync_ForDeadInstance_DoesNotInvoke()
+	{
+		// Arrange
+		var weakHandler = CreateWeakSubscriber();
+
+		// Act
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
-		// Give GC a moment to reclaim the instance.
-		Thread.Sleep(100);
-		var handler = weh.GetHandler();
-		Assert.Null(handler);
+
+		var isAliveBefore = weakHandler.IsAlive;
+		await weakHandler.InvokeAsync("Should not be received");
+
+		// Assert
+		Assert.False(isAliveBefore);
 	}
 
-	private static void CreateWeakInstance(out WeakEventHandler<string> weh)
+	private static WeakEventHandler<string> CreateWeakSubscriber()
 	{
-		var instance = new InstanceTest();
-		Action<string> handler = instance.Handler;
-		weh = new WeakEventHandler<string>(handler);
-		// instance goes out of scope after this method, allowing GC to reclaim it.
-	}
-
-	private class InstanceTest
-	{
-		public string? Result { get; private set; }
-		public void Handler(string msg)
+		var subscriber = new Subscriber
 		{
-			Result = msg;
+			ThrowIfInvoked = true
+		};
+		return new WeakEventHandler<string>(subscriber.InstanceHandler);
+		// 'subscriber' goes out of scope after this method.
+	}
+
+	private class Subscriber
+	{
+		public string LastReceived { get; private set; } = string.Empty;
+		public bool ThrowIfInvoked { get; set; }
+
+		public void InstanceHandler(string data)
+		{
+			if (ThrowIfInvoked)
+			{
+				throw new InvalidOperationException("This should not happen!");
+			}
+
+			LastReceived = data;
+		}
+
+		public async Task AsyncHandler(string data)
+		{
+			if (ThrowIfInvoked)
+			{
+				throw new InvalidOperationException("This should not happen!");
+			}
+
+			LastReceived = data;
+			await Task.CompletedTask;
 		}
 	}
 }

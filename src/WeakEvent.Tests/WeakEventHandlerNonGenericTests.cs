@@ -2,74 +2,146 @@
 public class WeakEventHandlerNonGenericTests
 {
 	[Fact]
-	public void StaticHandler_GetHandler_ReturnsHandlerAndMatches()
+	public void Constructor_NullDelegate_ThrowsException()
 	{
-		Action handler = StaticHandler;
-		var weh = new WeakEventHandler(handler);
+		// Arrange
+		Action handler = null!;
 
-		var retrieved = weh.GetHandler();
-		Assert.NotNull(retrieved);
-		retrieved();
-		Assert.True(_staticInvoked);
-
-		Assert.True(weh.Matches(handler));
-
-		Action newDelegate = StaticHandler;
-		Assert.True(weh.Matches(newDelegate));
+		// Act & Assert
+		Assert.Throws<NullReferenceException>(() => new WeakEventHandler(handler));
 	}
 
-	private static bool _staticInvoked = false;
+	[Fact]
+	public async Task StaticHandler_InvokeAsync_Void()
+	{
+		// Arrange
+		_staticInvoked = false;
+		var weakHandler = new WeakEventHandler(StaticHandler);
 
+		// Act
+		await weakHandler.InvokeAsync();
+
+		// Assert
+		Assert.True(_staticInvoked);
+		Assert.True(weakHandler.IsAlive);
+	}
+
+	private static bool _staticInvoked;
 	private static void StaticHandler()
 	{
 		_staticInvoked = true;
 	}
 
 	[Fact]
-	public void InstanceHandler_GetHandler_ReturnsHandlerAndMatches()
+	public async Task InstanceHandler_InvokeAsync_Void()
 	{
-		var instance = new InstanceTest();
-		Action handler = instance.Handler;
-		var weh = new WeakEventHandler(handler);
+		// Arrange
+		var subscriber = new Subscriber();
+		var weakHandler = new WeakEventHandler(subscriber.InstanceHandler);
 
-		var retrieved = weh.GetHandler();
-		Assert.NotNull(retrieved);
-		retrieved();
-		Assert.True(instance.Invoked);
+		// Act
+		await weakHandler.InvokeAsync();
 
-		Assert.True(weh.Matches(handler));
-
-		Action newDelegate = instance.Handler;
-		Assert.True(weh.Matches(newDelegate));
+		// Assert
+		Assert.True(subscriber.Invoked);
+		Assert.True(weakHandler.IsAlive);
 	}
 
 	[Fact]
-	public void InstanceHandler_GetHandler_ReturnsNullAfterGC()
+	public async Task InstanceHandler_InvokeAsync_Async()
 	{
-		CreateWeakInstance(out var weh);
+		// Arrange
+		var subscriber = new Subscriber();
+		var weakHandler = new WeakEventHandler(subscriber.AsyncHandler);
 
+		// Act
+		await weakHandler.InvokeAsync();
+
+		// Assert
+		Assert.True(subscriber.Invoked);
+		Assert.True(weakHandler.IsAlive);
+	}
+
+	[Fact]
+	public void Matches_ReturnsTrueForSameDelegate()
+	{
+		// Arrange
+		var subscriber = new Subscriber();
+		var weakHandler = new WeakEventHandler(subscriber.InstanceHandler);
+
+		// Act
+		var result = weakHandler.Matches(subscriber.InstanceHandler);
+
+		// Assert
+		Assert.True(result);
+	}
+
+	[Fact]
+	public void Matches_ReturnsFalseForDifferentDelegate()
+	{
+		// Arrange
+		var subscriber1 = new Subscriber();
+		var subscriber2 = new Subscriber();
+		var weakHandler = new WeakEventHandler(subscriber1.InstanceHandler);
+
+		// Act
+		var result = weakHandler.Matches(subscriber2.InstanceHandler);
+
+		// Assert
+		Assert.False(result);
+	}
+
+	[Fact]
+	public async Task InvokeAsync_ForDeadInstance_DoesNotInvoke()
+	{
+		// Arrange
+		var weakHandler = CreateWeakSubscriber();
+
+		// Act
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
-		Thread.Sleep(100);
 
-		var handler = weh.GetHandler();
-		Assert.Null(handler);
+		var isAliveBefore = weakHandler.IsAlive;
+		await weakHandler.InvokeAsync();
+
+		// Assert
+		Assert.False(isAliveBefore);
 	}
 
-	private static void CreateWeakInstance(out WeakEventHandler weh)
+	private static WeakEventHandler CreateWeakSubscriber()
 	{
-		var instance = new InstanceTest();
-		Action handler = instance.Handler;
-		weh = new WeakEventHandler(handler);
-		// instance goes out of scope after this method.
+		var subscriber = new Subscriber
+		{
+			ThrowIfInvoked = true
+		};
+		return new WeakEventHandler(subscriber.InstanceHandler);
+		// 'subscriber' goes out of scope after this method.
 	}
 
-	private class InstanceTest
+	private class Subscriber
 	{
 		public bool Invoked { get; private set; }
-		public void Handler()
+		public bool ThrowIfInvoked { get; set; }
+
+		public void InstanceHandler()
 		{
+			if (ThrowIfInvoked)
+			{
+				throw new InvalidOperationException("This should not happen!");
+			}
+
 			Invoked = true;
+		}
+
+		public async Task AsyncHandler()
+		{
+			if (ThrowIfInvoked)
+			{
+				throw new InvalidOperationException("This should not happen!");
+			}
+
+			Invoked = true;
+			await Task.CompletedTask;
 		}
 	}
 }

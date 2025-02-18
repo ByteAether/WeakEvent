@@ -2,19 +2,14 @@
 
 /// <summary>
 /// Represents a weak event that stores its subscribers using weak references.
-/// Subscribers register an <see cref="Action{TEvent}"/> and when an event is raised,
-/// only those whose target is still alive will be invoked.
+/// Subscribers register an <see cref="Action{TEvent}"/> or <see cref="Func{TEvent, Task}"/> and when an event is raised, only those whose target is still alive will be invoked.
 /// </summary>
 /// <typeparam name="TEvent">The type of the event arguments.</typeparam>
 public class WeakEvent<TEvent>
 {
 	private readonly List<WeakEventHandler<TEvent>> _handlers = [];
 
-#if NET9_0_OR_GREATER
-	private readonly Lock _lock = new();
-#else
-	private readonly object _lock = new();
-#endif
+	private readonly SemaphoreSlim _lock = new(1, 1);
 
 	/// <summary>
 	/// Subscribes the specified handler to the event.
@@ -25,6 +20,21 @@ public class WeakEvent<TEvent>
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
 	public void Subscribe(Action<TEvent> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		_handlers.Add(new WeakEventHandler<TEvent>(handler));
+	}
+
+	/// <summary>
+	/// Subscribes the specified async handler to the event.
+	/// </summary>
+	/// <param name="handler">
+	/// The handler to subscribe. It will be invoked when the event is raised,
+	/// provided that the target is still alive.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public void Subscribe(Func<TEvent, Task> handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
@@ -44,57 +54,46 @@ public class WeakEvent<TEvent>
 	}
 
 	/// <summary>
+	/// Unsubscribes the specified async handler from the event.
+	/// </summary>
+	/// <param name="handler">The handler to unsubscribe.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public void Unsubscribe(Func<TEvent, Task> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		_handlers.RemoveAll(weh => weh.Matches(handler));
+	}
+
+	/// <summary>
 	/// Raises the event, invoking all live subscribers with the provided event data.
 	/// Dead subscribers (whose targets have been garbage-collected) are removed.
 	/// </summary>
 	/// <param name="eventData">The event data to send to the subscribers.</param>
-	public void Send(TEvent eventData)
+	public async Task SendAsync(TEvent eventData)
 	{
-		List<WeakEventHandler<TEvent>>? deadHandlers = null;
+		await _lock.WaitAsync();
 
-		lock (_lock)
+		_handlers.RemoveAll(x => !x.IsAlive);
+
+		foreach (var handler in _handlers)
 		{
-			foreach (var weakHandler in _handlers)
-			{
-				var handler = weakHandler.GetHandler();
-				if (handler != null)
-				{
-					// Invoke the live handler.
-					handler(eventData);
-				}
-				else
-				{
-					// Remember handlers whose target has been garbage-collected.
-					deadHandlers ??= [];
-					deadHandlers.Add(weakHandler);
-				}
-			}
-
-			// Remove dead handlers from the list.
-			if (deadHandlers != null)
-			{
-				foreach (var dead in deadHandlers)
-				{
-					_handlers.Remove(dead);
-				}
-			}
+			await handler.InvokeAsync(eventData);
 		}
+
+		_lock.Release();
 	}
 }
 
 /// <summary>
 /// Represents a weak event that stores its subscribers using weak references.
-/// Subscribers register an <see cref="Action"/> and when an event is raised,
-/// only those whose target is still alive will be invoked.
+/// Subscribers register an <see cref="Action"/> or <see cref="Func{Task}"/> and when an event is raised, only those whose target is still alive will be invoked.
 /// </summary>
 public class WeakEvent
 {
 	private readonly List<WeakEventHandler> _handlers = [];
-#if NET9_0_OR_GREATER
-	private readonly Lock _lock = new();
-#else
-	private readonly object _lock = new();
-#endif
+
+	private readonly SemaphoreSlim _lock = new(1, 1);
 
 	/// <summary>
 	/// Subscribes the specified handler to the event.
@@ -105,6 +104,21 @@ public class WeakEvent
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
 	public void Subscribe(Action handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		_handlers.Add(new WeakEventHandler(handler));
+	}
+
+	/// <summary>
+	/// Subscribes the specified async handler to the event.
+	/// </summary>
+	/// <param name="handler">
+	/// The handler to subscribe. It will be invoked when the event is raised,
+	/// provided that the target is still alive.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public void Subscribe(Func<Task> handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
@@ -124,39 +138,32 @@ public class WeakEvent
 	}
 
 	/// <summary>
-	/// Raises the event, invoking all live subscribers.
+	/// Unsubscribes the specified async handler from the event.
+	/// </summary>
+	/// <param name="handler">The handler to unsubscribe.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public void Unsubscribe(Func<Task> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		_handlers.RemoveAll(weh => weh.Matches(handler));
+	}
+
+	/// <summary>
+	/// Raises the event, invoking all live subscribers with the provided event data.
 	/// Dead subscribers (whose targets have been garbage-collected) are removed.
 	/// </summary>
-	public void Send()
+	public async Task SendAsync()
 	{
-		List<WeakEventHandler>? deadHandlers = null;
+		await _lock.WaitAsync();
 
-		lock (_lock)
+		_handlers.RemoveAll(x => !x.IsAlive);
+
+		foreach (var handler in _handlers)
 		{
-			foreach (var weakHandler in _handlers)
-			{
-				var handler = weakHandler.GetHandler();
-				if (handler != null)
-				{
-					// Invoke the live handler.
-					handler();
-				}
-				else
-				{
-					// Remember handlers whose target has been garbage-collected.
-					deadHandlers ??= [];
-					deadHandlers.Add(weakHandler);
-				}
-			}
-
-			// Remove dead handlers from the list.
-			if (deadHandlers != null)
-			{
-				foreach (var dead in deadHandlers)
-				{
-					_handlers.Remove(dead);
-				}
-			}
+			await handler.InvokeAsync();
 		}
+
+		_lock.Release();
 	}
 }

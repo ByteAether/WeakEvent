@@ -25,19 +25,35 @@ public class WeakEventNonGenericTests
 	}
 
 	[Fact]
-	public void Send_InvokesSubscribedHandler()
+	public async Task Send_InvokesSubscribedHandler()
 	{
 		var weakEvent = new WeakEvent();
 		var invoked = false;
 		weakEvent.Subscribe(() => invoked = true);
 
-		weakEvent.Send();
+		await weakEvent.SendAsync();
 
 		Assert.True(invoked);
 	}
 
 	[Fact]
-	public void Unsubscribe_RemovesHandler()
+	public async Task Send_InvokesSubscribedAsyncHandler()
+	{
+		var weakEvent = new WeakEvent();
+		var invoked = false;
+		weakEvent.Subscribe(async () =>
+		{
+			invoked = true;
+			await Task.CompletedTask;
+		});
+
+		await weakEvent.SendAsync();
+
+		Assert.True(invoked);
+	}
+
+	[Fact]
+	public async Task Unsubscribe_RemovesHandler()
 	{
 		var weakEvent = new WeakEvent();
 		var count = 0;
@@ -45,44 +61,48 @@ public class WeakEventNonGenericTests
 		weakEvent.Subscribe(handler);
 
 		weakEvent.Unsubscribe(handler);
-		weakEvent.Send();
+		await weakEvent.SendAsync();
 
 		Assert.Equal(0, count);
 	}
 
 	[Fact]
-	public void MultipleHandlers_AreInvoked()
+	public async Task MultipleHandlers_AreInvoked()
 	{
 		var weakEvent = new WeakEvent();
 		var count = 0;
 		weakEvent.Subscribe(() => count += 1);
 		weakEvent.Subscribe(() => count += 2);
 
-		weakEvent.Send();
+		await weakEvent.SendAsync();
 
 		Assert.Equal(3, count);
 	}
 
 	[Fact]
-	public void DeadHandler_IsNotInvoked_AfterGarbageCollection()
+	public async Task DeadHandler_IsNotInvoked_AfterGarbageCollection()
 	{
 		var weakEvent = new WeakEvent();
 		var callCount = 0;
-		CreateSubscriber(weakEvent, () => callCount++);
+
+		await CreateSubscriberAndInvoke(weakEvent, () => callCount++);
 
 		// Force garbage collection to reclaim the subscriber instance.
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
 
-		weakEvent.Send();
+		// Invoke second time
+		await weakEvent.SendAsync();
 
-		Assert.Equal(0, callCount);
+		// Just one call should happen instead of 2
+		Assert.Equal(1, callCount);
 	}
 
-	private static void CreateSubscriber(WeakEvent weakEvent, Action onEvent)
+	private static async Task CreateSubscriberAndInvoke(WeakEvent weakEvent, Action onEvent)
 	{
 		var subscriber = new NonGenericSubscriber(onEvent);
 		weakEvent.Subscribe(subscriber.Handler);
+		await weakEvent.SendAsync();
 		// The subscriber goes out of scope after this method, allowing it to be GC’d.
 	}
 
