@@ -1,0 +1,37 @@
+name: Publish to NuGet
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+            9.x
+            6.x
+
+    - name: 'Get Version'
+      id: version
+      run: echo "version-without-v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+    - name: Pack
+      run: dotnet pack --configuration Release /p:ContinuousIntegrationBuild=true /p:PackageVersion=${{ steps.version.outputs.version-without-v }} /p:PackageReleaseNotes="See https://github.com/ByteAether/WeakEvent/releases/tag/${{ github.event.release.tag_name }}" --output ./output src/WeakEvent/WeakEvent.csproj
+
+    - name: Upload NuGet package as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package
+        path: ./output/*.nupkg
+
+    - name: Publish to NuGet
+      run: dotnet nuget push ./output/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json

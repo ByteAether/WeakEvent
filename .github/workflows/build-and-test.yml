@@ -1,0 +1,44 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+            9.x
+            6.x
+
+    - name: Restore dependencies
+      run: dotnet restore src/WeakEvent.sln
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release src/WeakEvent.sln
+
+    - name: Run tests
+      continue-on-error: true
+      run: dotnet test --no-build --verbosity normal --logger "trx" --configuration Release src/WeakEvent.sln
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: ./**/TestResults/**/*.trx

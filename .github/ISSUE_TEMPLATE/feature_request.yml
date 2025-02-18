@@ -1,0 +1,75 @@
+name: "🚀 Feature Request"
+description: "Suggest a new feature or improvement to the project."
+title: "[Feature Request]: "
+labels: 
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please provide as much detail as possible.
+
+  - type: checkboxes
+    id: preconditions
+    attributes:
+      label: Things to check
+      options:
+        - label: I have searched the **existing issues** for this bug
+          required: true
+    validations:
+      required: true   
+
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: Describe the feature
+      description: A clear and concise description of what you want to happen.
+      placeholder: Enter the feature details here
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_to_solve
+    attributes:
+      label: Problem to solve
+      description: Describe the problem your feature will address.
+      placeholder: Enter the problem details here
+    validations:
+      required: true
+      
+  - type: textarea
+    id: examples
+    attributes:
+      label: Have you seen this feature anywhere else?
+      description: Please provide links to other implementations, or screenshots or videos of the expected behavior if possible.
+      placeholder: Show us examples!
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative solutions or features you’ve considered.
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots to explain your feature request.
+      
+  - type: checkboxes
+    id: will-patch
+    attributes:
+      label: Contribute a patch?
+      description: |
+        If you plan to contribute a patch for this issue yourself, please check the box below - to tell us and others looking at the issue that someone’s already working on it. If you do check this box, please try to send a pull request within 7 days or so.
+      options:
+        - label: I’ll contribute a patch for this myself.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/ByteAether/WeakEvent/blob/main/CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

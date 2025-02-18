@@ -1,0 +1,102 @@
+name: "🐛 Bug Report"
+description: "Report a bug or unexpected behavior in the project."
+title: "[Bug]: "
+labels: 
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please provide as much detail as possible.
+        
+  - type: checkboxes
+    id: preconditions
+    attributes:
+      label: Things to check
+      options:
+        - label: I have searched the **existing issues** for this bug
+          required: true
+    validations:
+      required: true          
+
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+      placeholder: Enter the bug details here
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Describe the steps to reproduce the behavior.
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots about the problem.
+    
+  - type: input
+    id: version
+    attributes:
+      label: WeakEvent version
+      description: With which WeakEvent NuGet version are you experiencing the issue?
+      placeholder: WeakEvent version number
+    validations:
+      required: true
+      
+  - type: input
+    id: dotnet-version
+    attributes:
+      label: .NET version
+      description: With which .NET version are you experiencing the issue?
+      placeholder: .NET version
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Provide details about the environment where the issue occurs.
+      multiple: true
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: will-patch
+    attributes:
+      label: Contribute a patch?
+      description: |
+        If you plan to contribute a patch for this issue yourself, please check the box below - to tell us and others looking at the issue that someone’s already working on it. If you do check this box, please try to send a pull request within 7 days or so.
+      options:
+        - label: I’ll contribute a patch for this myself.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/ByteAether/WeakEvent/blob/main/CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

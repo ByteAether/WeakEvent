@@ -1,0 +1,56 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - src/**
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - src/**
+  schedule:
+    - cron: '20 6 * * 5'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read          # Allow GitHub Actions to read workflow files
+      contents: read         # Allow access to repository contents
+      security-events: write # Allow writing security alerts to the Security tab
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'csharp' ] # Specify the language(s) to analyze
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.x
+            6.x
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/workflows/codeql/codeql-config.yml
+
+      - name: Build the code
+        run: |
+          # Restore dependencies and build the C# project
+          dotnet restore src/WeakEvent/WeakEvent.csproj
+          dotnet build --no-incremental --configuration Release src/WeakEvent/WeakEvent.csproj
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
