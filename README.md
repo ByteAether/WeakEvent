@@ -43,13 +43,14 @@ Use the `--version` option to specify a [preview version](https://www.nuget.org/
 ### Using the `WeakEvent`
 
 ```csharp
-using WeakEvent;
+using ByteAether.WeakEvent;
 
 // Create an instance of the weak event without event data
 var myEvent = new WeakEvent();
 
-// Subscribe with a handler
-myEvent.Subscribe(() => Console.WriteLine("Event received!"));
+// Create a subscriber and subscribe
+var subscriber = () => Console.WriteLine("Event received!");
+myEvent.Subscribe(subscriber);
 
 // Raise the event
 myEvent.Send();
@@ -58,22 +59,20 @@ myEvent.Send();
 ### Using the `WeakEvent<TEvent>`
 
 ```csharp
-using WeakEvent;
-
-// Define your event data
-public class MyEventData
-{
-    public string Message { get; set; }
-}
+using ByteAether.WeakEvent;
 
 // Create an instance of the weak event with event data
 var myEvent = new WeakEvent<MyEventData>();
 
-// Subscribe with a handler
-myEvent.Subscribe(data => Console.WriteLine("Received: " + data.Message));
+// Create a subscriber and subscribe
+var subscriber = (MyEventData data) => Console.WriteLine("Received: " + data.Message);
+myEvent.Subscribe(subscriber);
 
 // Raise the event
-myEvent.Send(new MyEventData { Message = "Hello, World!" });
+myEvent.Send(new MyEventData("Hello, World!"));
+
+// Define your event data
+public record MyEventData(string Message);
 ```
 
 ## API
