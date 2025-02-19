@@ -2,62 +2,32 @@
 
 namespace ByteAether.WeakEvent;
 
-internal readonly struct WeakEventHandler<TEvent>(Delegate handler)
-{
-	private readonly WeakReference? _weakTarget = handler.Target != null ? new WeakReference(handler.Target) : null;
-	private readonly MethodInfo _method = handler.Method;
-
-	public bool IsAlive => _weakTarget == null || _weakTarget.Target != null;
-
-	public Task InvokeAsync(TEvent eventData, CancellationToken cancellationToken = default)
-	{
-		var target = _weakTarget?.Target;
-
-		if (target == null && _weakTarget != null)
-		{
-			return Task.CompletedTask;
-		}
-
-		object?[] arguments = _method.GetParameters().Length == 2
-			? [eventData, cancellationToken]
-			: [eventData];
-
-		var invokeReturn = _method.Invoke(target, arguments);
-
-		return _method.ReturnType == typeof(Task)
-			? (Task)invokeReturn!
-			: Task.CompletedTask;
-	}
-
-	public bool Matches(Delegate handler)
-		=> _weakTarget?.Target == handler.Target && _method.Equals(handler.Method);
-}
-
 internal readonly struct WeakEventHandler(Delegate handler)
 {
+	// If _weakTarget is null, the handler is static.
 	private readonly WeakReference? _weakTarget = handler.Target != null ? new WeakReference(handler.Target) : null;
 	private readonly MethodInfo _method = handler.Method;
+	private readonly bool _hasCtParam = handler.Method.GetParameters().LastOrDefault()?.ParameterType == typeof(CancellationToken);
 
+	// If _weakTarget is null, the handler is static and always alive.
 	public bool IsAlive => _weakTarget == null || _weakTarget.Target != null;
 
-	public Task InvokeAsync(CancellationToken cancellationToken = default)
+	public Task InvokeAsync(List<object?> args, CancellationToken cancellationToken = default)
 	{
+		// Get target first so it would not be GCed before the method is invoked.
 		var target = _weakTarget?.Target;
 
-		if (target == null && _weakTarget != null)
+		if (!IsAlive)
 		{
 			return Task.CompletedTask;
 		}
 
-		object?[] arguments = _method.GetParameters().Length == 1
-			? [cancellationToken]
-			: [];
+		if (_hasCtParam)
+		{
+			args.Add(cancellationToken);
+		}
 
-		var invokeReturn = _method.Invoke(target, arguments);
-
-		return _method.ReturnType == typeof(Task)
-			? (Task)invokeReturn!
-			: Task.CompletedTask;
+		return _method.Invoke(target, [.. args]) as Task ?? Task.CompletedTask;
 	}
 
 	public bool Matches(Delegate handler)

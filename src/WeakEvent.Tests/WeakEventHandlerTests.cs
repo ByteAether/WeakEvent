@@ -1,5 +1,5 @@
 ﻿namespace ByteAether.WeakEvent.Tests;
-public class WeakEventHandlerNonGenericTests
+public class WeakEventHandlerTests
 {
 	[Fact]
 	public void Constructor_NullDelegate_ThrowsException()
@@ -19,7 +19,7 @@ public class WeakEventHandlerNonGenericTests
 		var weakHandler = new WeakEventHandler(StaticHandler);
 
 		// Act
-		await weakHandler.InvokeAsync();
+		await weakHandler.InvokeAsync([]);
 
 		// Assert
 		Assert.True(_staticInvoked);
@@ -40,7 +40,7 @@ public class WeakEventHandlerNonGenericTests
 		var weakHandler = new WeakEventHandler(subscriber.InstanceHandler);
 
 		// Act
-		await weakHandler.InvokeAsync();
+		await weakHandler.InvokeAsync([]);
 
 		// Assert
 		Assert.True(subscriber.Invoked);
@@ -55,7 +55,7 @@ public class WeakEventHandlerNonGenericTests
 		var weakHandler = new WeakEventHandler(subscriber.AsyncHandler);
 
 		// Act
-		await weakHandler.InvokeAsync();
+		await weakHandler.InvokeAsync([]);
 
 		// Assert
 		Assert.True(subscriber.Invoked);
@@ -102,7 +102,7 @@ public class WeakEventHandlerNonGenericTests
 		GC.WaitForPendingFinalizers();
 
 		var isAliveBefore = weakHandler.IsAlive;
-		await weakHandler.InvokeAsync();
+		await weakHandler.InvokeAsync([]);
 
 		// Assert
 		Assert.False(isAliveBefore);
