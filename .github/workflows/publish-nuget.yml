@@ -18,7 +18,6 @@ jobs:
       with:
         dotnet-version: |
             9.x
-            6.x
 
     - name: 'Get Version'
       id: version

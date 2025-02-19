@@ -160,7 +160,10 @@ public abstract class WeakEventBase
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
 	protected void Subscribe(Delegate handler)
 	{
-		ArgumentNullException.ThrowIfNull(handler);
+		if (handler is null)
+		{
+			throw new ArgumentNullException(nameof(handler));
+		}
 
 		_handlers.Add(new WeakEventHandler(handler));
 	}
@@ -172,7 +175,10 @@ public abstract class WeakEventBase
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
 	protected bool Unsubscribe(Delegate handler)
 	{
-		ArgumentNullException.ThrowIfNull(handler);
+		if (handler is null)
+		{
+			throw new ArgumentNullException(nameof(handler));
+		}
 
 		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
 	}

@@ -20,8 +20,7 @@ In the context of Blazor components, this functionality is particularly valuable
 
 ## Features
 
-![.NET 9.0](https://img.shields.io/badge/.NET-9.0-brightgreen)
-![.NET 6.0](https://img.shields.io/badge/.NET-6.0-brightgreen)
+![.NET Standard 2.0](https://img.shields.io/badge/.NET_Standard-2.0-brightgreen)
 
 - **Weak References:** Subscribers are held via weak references, allowing the garbage collector to reclaim them when they are no longer needed.
 - **Events With or Without Data:** Use `WeakEvent<TEvent>` when you need to pass event data to subscribers, or `WeakEvent` for simple notifications that don't require additional information.
