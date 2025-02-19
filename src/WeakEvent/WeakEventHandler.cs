@@ -9,24 +9,24 @@ internal readonly struct WeakEventHandler<TEvent>(Delegate handler)
 
 	public bool IsAlive => _weakTarget == null || _weakTarget.Target != null;
 
-	public Task InvokeAsync(TEvent eventData)
+	public Task InvokeAsync(TEvent eventData, CancellationToken cancellationToken = default)
 	{
-		if (!IsAlive)
-		{
-			return Task.CompletedTask;
-		}
-
 		var target = _weakTarget?.Target;
 
-		if (_method.ReturnType == typeof(Task))
+		if (target == null && _weakTarget != null)
 		{
-			return (Task)_method.Invoke(target, [eventData])!;
-		}
-		else
-		{
-			_method.Invoke(target, [eventData]);
 			return Task.CompletedTask;
 		}
+
+		object?[] arguments = _method.GetParameters().Length == 2
+			? [eventData, cancellationToken]
+			: [eventData];
+
+		var invokeReturn = _method.Invoke(target, arguments);
+
+		return _method.ReturnType == typeof(Task)
+			? (Task)invokeReturn!
+			: Task.CompletedTask;
 	}
 
 	public bool Matches(Delegate handler)
@@ -40,24 +40,24 @@ internal readonly struct WeakEventHandler(Delegate handler)
 
 	public bool IsAlive => _weakTarget == null || _weakTarget.Target != null;
 
-	public Task InvokeAsync()
+	public Task InvokeAsync(CancellationToken cancellationToken = default)
 	{
-		if (!IsAlive)
-		{
-			return Task.CompletedTask;
-		}
-
 		var target = _weakTarget?.Target;
 
-		if (_method.ReturnType == typeof(Task))
+		if (target == null && _weakTarget != null)
 		{
-			return (Task)_method.Invoke(target, [])!;
-		}
-		else
-		{
-			_method.Invoke(target, []);
 			return Task.CompletedTask;
 		}
+
+		object?[] arguments = _method.GetParameters().Length == 1
+			? [cancellationToken]
+			: [];
+
+		var invokeReturn = _method.Invoke(target, arguments);
+
+		return _method.ReturnType == typeof(Task)
+			? (Task)invokeReturn!
+			: Task.CompletedTask;
 	}
 
 	public bool Matches(Delegate handler)

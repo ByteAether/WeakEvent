@@ -42,15 +42,30 @@ public class WeakEvent<TEvent>
 	}
 
 	/// <summary>
+	/// Subscribes the specified async handler to the event.
+	/// </summary>
+	/// <param name="handler">
+	/// The handler to subscribe. It will be invoked when the event is raised,
+	/// provided that the target is still alive.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public void Subscribe(Func<TEvent, CancellationToken, Task> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		_handlers.Add(new WeakEventHandler<TEvent>(handler));
+	}
+
+	/// <summary>
 	/// Unsubscribes the specified handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Unsubscribe(Action<TEvent> handler)
+	public bool Unsubscribe(Action<TEvent> handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
-		_handlers.RemoveAll(weh => weh.Matches(handler));
+		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
 	}
 
 	/// <summary>
@@ -58,11 +73,23 @@ public class WeakEvent<TEvent>
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Unsubscribe(Func<TEvent, Task> handler)
+	public bool Unsubscribe(Func<TEvent, Task> handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
-		_handlers.RemoveAll(weh => weh.Matches(handler));
+		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
+	}
+
+	/// <summary>
+	/// Unsubscribes the specified async handler from the event.
+	/// </summary>
+	/// <param name="handler">The handler to unsubscribe.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public bool Unsubscribe(Func<TEvent, CancellationToken, Task> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
 	}
 
 	/// <summary>
@@ -70,15 +97,16 @@ public class WeakEvent<TEvent>
 	/// Dead subscribers (whose targets have been garbage-collected) are removed.
 	/// </summary>
 	/// <param name="eventData">The event data to send to the subscribers.</param>
-	public async Task SendAsync(TEvent eventData)
+	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
+	public async Task SendAsync(TEvent eventData, CancellationToken cancellationToken = default)
 	{
-		await _lock.WaitAsync();
+		await _lock.WaitAsync(cancellationToken);
 
 		_handlers.RemoveAll(x => !x.IsAlive);
 
 		foreach (var handler in _handlers)
 		{
-			await handler.InvokeAsync(eventData);
+			await handler.InvokeAsync(eventData, cancellationToken);
 		}
 
 		_lock.Release();
@@ -126,15 +154,30 @@ public class WeakEvent
 	}
 
 	/// <summary>
+	/// Subscribes the specified async handler to the event.
+	/// </summary>
+	/// <param name="handler">
+	/// The handler to subscribe. It will be invoked when the event is raised,
+	/// provided that the target is still alive.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public void Subscribe(Func<CancellationToken, Task> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		_handlers.Add(new WeakEventHandler(handler));
+	}
+
+	/// <summary>
 	/// Unsubscribes the specified handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Unsubscribe(Action handler)
+	public bool Unsubscribe(Action handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
-		_handlers.RemoveAll(weh => weh.Matches(handler));
+		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
 	}
 
 	/// <summary>
@@ -142,26 +185,39 @@ public class WeakEvent
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Unsubscribe(Func<Task> handler)
+	public bool Unsubscribe(Func<Task> handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
-		_handlers.RemoveAll(weh => weh.Matches(handler));
+		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
+	}
+
+	/// <summary>
+	/// Unsubscribes the specified async handler from the event.
+	/// </summary>
+	/// <param name="handler">The handler to unsubscribe.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
+	public bool Unsubscribe(Func<CancellationToken, Task> handler)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+
+		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
 	}
 
 	/// <summary>
 	/// Raises the event, invoking all live subscribers with the provided event data.
 	/// Dead subscribers (whose targets have been garbage-collected) are removed.
 	/// </summary>
-	public async Task SendAsync()
+	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
+	public async Task SendAsync(CancellationToken cancellationToken = default)
 	{
-		await _lock.WaitAsync();
+		await _lock.WaitAsync(cancellationToken);
 
 		_handlers.RemoveAll(x => !x.IsAlive);
 
 		foreach (var handler in _handlers)
 		{
-			await handler.InvokeAsync();
+			await handler.InvokeAsync(cancellationToken);
 		}
 
 		_lock.Release();

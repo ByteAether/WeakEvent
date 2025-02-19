@@ -5,14 +5,14 @@ public class WeakEventNonGenericTests
 	public void Subscribe_NullHandler_ThrowsArgumentNullException()
 	{
 		var weakEvent = new WeakEvent();
-		Assert.Throws<ArgumentNullException>(() => weakEvent.Subscribe(null!));
+		Assert.Throws<ArgumentNullException>(() => weakEvent.Subscribe((Action)null!));
 	}
 
 	[Fact]
 	public void Unsubscribe_NullHandler_ThrowsArgumentNullException()
 	{
 		var weakEvent = new WeakEvent();
-		Assert.Throws<ArgumentNullException>(() => weakEvent.Unsubscribe(null!));
+		Assert.Throws<ArgumentNullException>(() => weakEvent.Unsubscribe((Action)null!));
 	}
 
 	[Fact]
@@ -20,47 +20,58 @@ public class WeakEventNonGenericTests
 	{
 		var weakEvent = new WeakEvent();
 		Action handler = () => { };
-		var exception = Record.Exception(() => weakEvent.Unsubscribe(handler));
+		var exception = Record.Exception(() => Assert.False(weakEvent.Unsubscribe(handler)));
 		Assert.Null(exception);
 	}
 
 	[Fact]
-	public async Task Send_InvokesSubscribedHandler()
+	public async Task SendAsync_WithCancelledToken_ThrowsOperationCanceledExceptionHandlerNotInvoked()
 	{
 		var weakEvent = new WeakEvent();
-		var invoked = false;
-		weakEvent.Subscribe(() => invoked = true);
+		var handlerInvoked = false;
+		// Subscribe a handler that would set the flag to true.
+		weakEvent.Subscribe(() => handlerInvoked = true);
+		// Cancel the token immediately so that any wait operation observes the cancellation
+		using var cts = new CancellationTokenSource();
+		cts.Cancel();
 
-		await weakEvent.SendAsync();
-
-		Assert.True(invoked);
-	}
-
-	[Fact]
-	public async Task Send_InvokesSubscribedAsyncHandler()
-	{
-		var weakEvent = new WeakEvent();
-		var invoked = false;
-		weakEvent.Subscribe(async () =>
-		{
-			invoked = true;
-			await Task.CompletedTask;
-		});
-
-		await weakEvent.SendAsync();
-
-		Assert.True(invoked);
+		// Assert that sending an event with the cancelled token throws the expected exception.
+		await Assert.ThrowsAnyAsync<OperationCanceledException>(
+			() => weakEvent.SendAsync(cts.Token)
+		);
+		Assert.False(handlerInvoked, "The subscribed handler should not be invoked when cancellation is requested.");
 	}
 
 	[Fact]
 	public async Task Unsubscribe_RemovesHandler()
 	{
-		var weakEvent = new WeakEvent();
 		var count = 0;
-		Action handler = () => count++;
-		weakEvent.Subscribe(handler);
 
-		weakEvent.Unsubscribe(handler);
+		void syncHandler()
+		{
+			count += 1;
+		}
+		async Task asyncHandler()
+		{
+			count += 2;
+			await Task.CompletedTask;
+		}
+		async Task asyncHandlerCT(CancellationToken ct)
+		{
+			count += 4;
+			await Task.CompletedTask;
+		}
+
+		var weakEvent = new WeakEvent();
+
+		weakEvent.Subscribe(syncHandler);
+		weakEvent.Subscribe(asyncHandler);
+		weakEvent.Subscribe(asyncHandlerCT);
+
+		weakEvent.Unsubscribe(syncHandler);
+		weakEvent.Unsubscribe(asyncHandler);
+		weakEvent.Unsubscribe(asyncHandlerCT);
+
 		await weakEvent.SendAsync();
 
 		Assert.Equal(0, count);
@@ -69,14 +80,32 @@ public class WeakEventNonGenericTests
 	[Fact]
 	public async Task MultipleHandlers_AreInvoked()
 	{
-		var weakEvent = new WeakEvent();
 		var count = 0;
-		weakEvent.Subscribe(() => count += 1);
-		weakEvent.Subscribe(() => count += 2);
+
+		void syncHandler()
+		{
+			count += 1;
+		}
+		async Task asyncHandler()
+		{
+			count += 2;
+			await Task.CompletedTask;
+		}
+		async Task asyncHandlerCT(CancellationToken ct)
+		{
+			count += 4;
+			await Task.CompletedTask;
+		}
+
+		var weakEvent = new WeakEvent();
+
+		weakEvent.Subscribe(syncHandler);
+		weakEvent.Subscribe(asyncHandler);
+		weakEvent.Subscribe(asyncHandlerCT);
 
 		await weakEvent.SendAsync();
 
-		Assert.Equal(3, count);
+		Assert.Equal(7, count);
 	}
 
 	[Fact]

@@ -79,23 +79,27 @@ public record MyEventData(string Message);
 
 ### `WeakEvent<TEvent>`
  * `Subscribe(Action<TEvent> handler)`\
-   `Subscribe(Func<TEvent, Task> handler)`
-    * Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
+   `Subscribe(Func<TEvent, Task> handler)`\
+   `Subscribe(Func<TEvent, CancellationToken, Task> handler)`\
+   Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
  * `Unsubscribe(Action<TEvent> handler)`\
-   `Unsubscribe(Func<TEvent, Task> handler)`
-   * Unsubscribes the specified handler from the event.
- * `SendAsync(TEvent eventData)`
-   * Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
+   `Unsubscribe(Func<TEvent, Task> handler)`\
+   `Unsubscribe(Func<TEvent, CancellationToken, Task> handler)`\
+   Unsubscribes the specified handler from the event.
+ * `SendAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
+   Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ### `WeakEvent`
  * `Subscribe(Action handler)`\
-   `Subscribe(Func<Task> handler)`
-   * Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
+   `Subscribe(Func<Task> handler)`\
+   `Subscribe(Func<CancellationToken, Task> handler)`\
+   Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
  * `Unsubscribe(Action handler)`\
-   `Unsubscribe(Func<Task> handler)`
-   * Unsubscribes the specified handler from the event.
- * `SendAsync()`
-    * Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
+   `Unsubscribe(Func<Task> handler)`\
+   `Unsubscribe(Func<CancellationToken, Task> handler)`\
+   Unsubscribes the specified handler from the event.
+ * `SendAsync(CancellationToken cancellationToken = default)`\
+   Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ## Contributing
 

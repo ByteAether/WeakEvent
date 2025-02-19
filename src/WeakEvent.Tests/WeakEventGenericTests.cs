@@ -7,14 +7,14 @@ public class WeakEventGenericTests
 	public void Subscribe_NullHandler_ThrowsArgumentNullException()
 	{
 		var weakEvent = new WeakEvent<string>();
-		Assert.Throws<ArgumentNullException>(() => weakEvent.Subscribe(null!));
+		Assert.Throws<ArgumentNullException>(() => weakEvent.Subscribe((Action<string>)null!));
 	}
 
 	[Fact]
 	public void Unsubscribe_NullHandler_ThrowsArgumentNullException()
 	{
 		var weakEvent = new WeakEvent<string>();
-		Assert.Throws<ArgumentNullException>(() => weakEvent.Unsubscribe(null!));
+		Assert.Throws<ArgumentNullException>(() => weakEvent.Unsubscribe((Action<string>)null!));
 	}
 
 	[Fact]
@@ -22,49 +22,59 @@ public class WeakEventGenericTests
 	{
 		var weakEvent = new WeakEvent<string>();
 		Action<string> handler = msg => { };
-		var exception = Record.Exception(() => weakEvent.Unsubscribe(handler));
+		var exception = Record.Exception(() => Assert.False(weakEvent.Unsubscribe(handler)));
 		Assert.Null(exception);
 	}
 
 	[Fact]
-	public async Task Send_InvokesSubscribedHandlerAsync()
+	public async Task SendAsync_WithCancelledToken_ThrowsOperationCanceledExceptionHandlerNotInvoked()
 	{
 		var weakEvent = new WeakEvent<string>();
-		var received = string.Empty;
-		weakEvent.Subscribe(msg => received = msg);
+		var handlerInvoked = false;
+		// Subscribe a handler that would set the flag to true.
+		weakEvent.Subscribe(eventData => handlerInvoked = true);
+		// Cancel the token immediately so that any wait operation observes the cancellation
+		using var cts = new CancellationTokenSource();
+		cts.Cancel();
 
-		await weakEvent.SendAsync("Hello");
-
-		Assert.Equal("Hello", received);
-	}
-
-	[Fact]
-	public async Task Send_InvokesSubscribedAsyncHandler()
-	{
-		var weakEvent = new WeakEvent<string>();
-		var received = string.Empty;
-		weakEvent.Subscribe(async msg =>
-		{
-			received = msg;
-			await Task.CompletedTask;
-		});
-
-		await weakEvent.SendAsync("Hello");
-
-		Assert.Equal("Hello", received);
+		// Assert that sending an event with the cancelled token throws the expected exception.
+		await Assert.ThrowsAnyAsync<OperationCanceledException>(
+			() => weakEvent.SendAsync("Test event", cts.Token)
+		);
+		Assert.False(handlerInvoked, "The subscribed handler should not be invoked when cancellation is requested.");
 	}
 
 	[Fact]
 	public async Task Unsubscribe_RemovesHandler()
 	{
-		var weakEvent = new WeakEvent<string>();
 		var count = 0;
-		Action<string> handler = msg => count++;
 
-		weakEvent.Subscribe(handler);
-		weakEvent.Unsubscribe(handler);
+		void syncHandler(int x)
+		{
+			count += 1 * x;
+		}
+		async Task asyncHandler(int x)
+		{
+			count += 2 * x;
+			await Task.CompletedTask;
+		}
+		async Task asyncHandlerCT(int x, CancellationToken ct)
+		{
+			count += 4 * x;
+			await Task.CompletedTask;
+		}
 
-		await weakEvent.SendAsync("Test");
+		var weakEvent = new WeakEvent<int>();
+
+		weakEvent.Subscribe(syncHandler);
+		weakEvent.Subscribe(asyncHandler);
+		weakEvent.Subscribe(asyncHandlerCT);
+
+		weakEvent.Unsubscribe(syncHandler);
+		weakEvent.Unsubscribe(asyncHandler);
+		weakEvent.Unsubscribe(asyncHandlerCT);
+
+		await weakEvent.SendAsync(2);
 
 		Assert.Equal(0, count);
 	}
@@ -72,15 +82,32 @@ public class WeakEventGenericTests
 	[Fact]
 	public async Task MultipleHandlers_AreInvoked()
 	{
-		var weakEvent = new WeakEvent<int>();
 		var count = 0;
-		weakEvent.Subscribe(i => count += i);
-		weakEvent.Subscribe(i => count += i * 2);
 
-		await weakEvent.SendAsync(5);
+		void syncHandler(int x)
+		{
+			count += 1 * x;
+		}
+		async Task asyncHandler(int x)
+		{
+			count += 2 * x;
+			await Task.CompletedTask;
+		}
+		async Task asyncHandlerCT(int x, CancellationToken ct)
+		{
+			count += 4 * x;
+			await Task.CompletedTask;
+		}
 
-		// Expected: 5 + 10 = 15
-		Assert.Equal(15, count);
+		var weakEvent = new WeakEvent<int>();
+
+		weakEvent.Subscribe(syncHandler);
+		weakEvent.Subscribe(asyncHandler);
+		weakEvent.Subscribe(asyncHandlerCT);
+
+		await weakEvent.SendAsync(2);
+
+		Assert.Equal(14, count);
 	}
 
 	[Fact]
@@ -88,6 +115,7 @@ public class WeakEventGenericTests
 	{
 		var weakEvent = new WeakEvent<string>();
 		var callCount = 0;
+
 		await CreateSubscriberAndInvoke(weakEvent, () => callCount++);
 
 		// Force garbage collection to reclaim the subscriber instance.
