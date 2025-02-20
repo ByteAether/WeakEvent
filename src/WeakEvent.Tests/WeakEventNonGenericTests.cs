@@ -25,7 +25,7 @@ public class WeakEventNonGenericTests
 	}
 
 	[Fact]
-	public async Task SendAsync_WithCancelledToken_ThrowsOperationCanceledExceptionHandlerNotInvoked()
+	public async Task PublishAsync_WithCancelledToken_ThrowsOperationCanceledExceptionHandlerNotInvoked()
 	{
 		var weakEvent = new WeakEvent();
 		var handlerInvoked = false;
@@ -35,9 +35,9 @@ public class WeakEventNonGenericTests
 		using var cts = new CancellationTokenSource();
 		cts.Cancel();
 
-		// Assert that sending an event with the cancelled token throws the expected exception.
+		// Assert that publishing an event with the cancelled token throws the expected exception.
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(
-			() => weakEvent.SendAsync(cts.Token)
+			() => weakEvent.PublishAsync(cts.Token)
 		);
 		Assert.False(handlerInvoked, "The subscribed handler should not be invoked when cancellation is requested.");
 	}
@@ -72,7 +72,7 @@ public class WeakEventNonGenericTests
 		weakEvent.Unsubscribe(asyncHandler);
 		weakEvent.Unsubscribe(asyncHandlerCT);
 
-		await weakEvent.SendAsync();
+		await weakEvent.PublishAsync();
 
 		Assert.Equal(0, count);
 	}
@@ -103,7 +103,7 @@ public class WeakEventNonGenericTests
 		weakEvent.Subscribe(asyncHandler);
 		weakEvent.Subscribe(asyncHandlerCT);
 
-		await weakEvent.SendAsync();
+		await weakEvent.PublishAsync();
 
 		Assert.Equal(7, count);
 	}
@@ -121,7 +121,7 @@ public class WeakEventNonGenericTests
 		GC.WaitForPendingFinalizers();
 
 		// Invoke second time
-		await weakEvent.SendAsync();
+		await weakEvent.PublishAsync();
 
 		// Just one call should happen instead of 2
 		Assert.Equal(1, callCount);
@@ -131,7 +131,7 @@ public class WeakEventNonGenericTests
 	{
 		var subscriber = new NonGenericSubscriber(onEvent);
 		weakEvent.Subscribe(subscriber.Handler);
-		await weakEvent.SendAsync();
+		await weakEvent.PublishAsync();
 		// The subscriber goes out of scope after this method, allowing it to be GC’d.
 	}
 

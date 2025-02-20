@@ -25,7 +25,7 @@ In the context of Blazor components, this functionality is particularly valuable
 - **Weak References:** Subscribers are held via weak references, allowing the garbage collector to reclaim them when they are no longer needed.
 - **Events With or Without Data:** Use `WeakEvent<TEvent>` when you need to pass event data to subscribers, or `WeakEvent` for simple notifications that don't require additional information.
 - **Automatic Cleanup:** Dead subscribers (whose targets have been garbage-collected) are automatically removed when the event is raised.
-- **Simple API:** Intuitive methods for subscribing, unsubscribing, and sending events.
+- **Simple API:** Intuitive methods for subscribing, unsubscribing, and publishing events.
 
 ## Installation
 
@@ -52,7 +52,7 @@ var subscriber = () => Console.WriteLine("Event received!");
 myEvent.Subscribe(subscriber);
 
 // Raise the event
-await myEvent.SendAsync();
+await myEvent.PublishAsync();
 ```
 
 ### Using the `WeakEvent<TEvent>`
@@ -68,7 +68,7 @@ var subscriber = (MyEventData data) => Console.WriteLine("Received: " + data.Mes
 myEvent.Subscribe(subscriber);
 
 // Raise the event
-await myEvent.SendAsync(new MyEventData("Hello, World!"));
+await myEvent.PublishAsync(new MyEventData("Hello, World!"));
 
 // Define your event data
 public record MyEventData(string Message);
@@ -85,7 +85,7 @@ public record MyEventData(string Message);
    `Unsubscribe(Func<TEvent, Task> handler)`\
    `Unsubscribe(Func<TEvent, CancellationToken, Task> handler)`\
    Unsubscribes the specified handler from the event.
- * `SendAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
+ * `PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
    Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ### `WeakEvent`
@@ -97,7 +97,7 @@ public record MyEventData(string Message);
    `Unsubscribe(Func<Task> handler)`\
    `Unsubscribe(Func<CancellationToken, Task> handler)`\
    Unsubscribes the specified handler from the event.
- * `SendAsync(CancellationToken cancellationToken = default)`\
+ * `PublishAsync(CancellationToken cancellationToken = default)`\
    Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ## Contributing

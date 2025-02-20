@@ -66,9 +66,9 @@ public class WeakEvent<TEvent> : WeakEventBase
 	/// Raises the event, invoking all live subscribers with the provided event data.
 	/// Dead subscribers (whose targets have been garbage-collected) are removed.
 	/// </summary>
-	/// <param name="eventData">The event data to send to the subscribers.</param>
+	/// <param name="eventData">The event data to publish to the subscribers.</param>
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	public Task SendAsync(TEvent eventData, CancellationToken cancellationToken = default) => base.SendAsync([eventData], cancellationToken);
+	public Task PublishAsync(TEvent eventData, CancellationToken cancellationToken = default) => base.PublishAsync([eventData], cancellationToken);
 }
 
 /// <summary>
@@ -137,7 +137,7 @@ public class WeakEvent : WeakEventBase
 	/// Dead subscribers (whose targets have been garbage-collected) are removed.
 	/// </summary>
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	public Task SendAsync(CancellationToken cancellationToken = default) => base.SendAsync([], cancellationToken);
+	public Task PublishAsync(CancellationToken cancellationToken = default) => base.PublishAsync([], cancellationToken);
 }
 
 /// <summary>
@@ -189,7 +189,7 @@ public abstract class WeakEventBase
 	/// </summary>
 	/// <param name="args">Invocation arguments for each delegate</param>
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	protected async Task SendAsync(List<object?> args, CancellationToken cancellationToken = default)
+	protected async Task PublishAsync(List<object?> args, CancellationToken cancellationToken = default)
 	{
 		await _lock.WaitAsync(cancellationToken);
 
