@@ -76,18 +76,6 @@ public record MyEventData(string Message);
 
 ## API
 
-### `WeakEvent<TEvent>`
- * `Subscribe(Action<TEvent> handler)`\
-   `Subscribe(Func<TEvent, Task> handler)`\
-   `Subscribe(Func<TEvent, CancellationToken, Task> handler)`\
-   Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
- * `Unsubscribe(Action<TEvent> handler)`\
-   `Unsubscribe(Func<TEvent, Task> handler)`\
-   `Unsubscribe(Func<TEvent, CancellationToken, Task> handler)`\
-   Unsubscribes the specified handler from the event.
- * `PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
-   Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
-
 ### `WeakEvent`
  * `Subscribe(Action handler)`\
    `Subscribe(Func<Task> handler)`\
@@ -99,6 +87,18 @@ public record MyEventData(string Message);
    Unsubscribes the specified handler from the event.
  * `PublishAsync(CancellationToken cancellationToken = default)`\
    Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
+
+### `WeakEvent<TEvent>`
+ * `Subscribe(Action<TEvent> handler)`\
+   `Subscribe(Func<TEvent, Task> handler)`\
+   `Subscribe(Func<TEvent, CancellationToken, Task> handler)`\
+   Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
+ * `Unsubscribe(Action<TEvent> handler)`\
+   `Unsubscribe(Func<TEvent, Task> handler)`\
+   `Unsubscribe(Func<TEvent, CancellationToken, Task> handler)`\
+   Unsubscribes the specified handler from the event.
+ * `PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
+   Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ## Contributing
 
