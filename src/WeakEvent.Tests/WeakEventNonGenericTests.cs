@@ -114,7 +114,14 @@ public class WeakEventNonGenericTests
 		var weakEvent = new WeakEvent();
 		var callCount = 0;
 
-		await CreateSubscriberAndInvoke(weakEvent, () => callCount++);
+		static async Task createSubscriberAndInvoke(WeakEvent weakEvent, Action onEvent)
+		{
+			var subscriber = new NonGenericSubscriber(onEvent);
+			weakEvent.Subscribe(subscriber.Handler);
+			await weakEvent.PublishAsync();
+			// The subscriber goes out of scope after this method, allowing it to be GC’d.
+		}
+		await createSubscriberAndInvoke(weakEvent, () => callCount++);
 
 		// Force garbage collection to reclaim the subscriber instance.
 		GC.Collect();
@@ -127,12 +134,36 @@ public class WeakEventNonGenericTests
 		Assert.Equal(1, callCount);
 	}
 
-	private static async Task CreateSubscriberAndInvoke(WeakEvent weakEvent, Action onEvent)
+	[Fact]
+	public void MultipleHandlers_CorrectCount()
 	{
-		var subscriber = new NonGenericSubscriber(onEvent);
-		weakEvent.Subscribe(subscriber.Handler);
-		await weakEvent.PublishAsync();
-		// The subscriber goes out of scope after this method, allowing it to be GC’d.
+		// Stage 1 - No subscribers yet
+		var weakEvent = new WeakEvent();
+		Assert.Equal(0, weakEvent.SubscriberCount);
+
+		// Stage 2 - Add local handler
+		void syncHandler()
+		{ }
+		weakEvent.Subscribe(syncHandler);
+		Assert.Equal(1, weakEvent.SubscriberCount);
+
+		// Stage 3 - Add a garbage-collected handler
+		void createSubscriberAndAssert()
+		{
+			var subscriber = new NonGenericSubscriber(() => { });
+			weakEvent.Subscribe(subscriber.Handler);
+			Assert.Equal(2, weakEvent.SubscriberCount);
+		}
+		createSubscriberAndAssert();
+
+		// Stage 4 - Force garbage collection to reclaim the garbage-collectable subscriber instance.
+		GC.Collect();
+		GC.WaitForPendingFinalizers();
+		Assert.Equal(1, weakEvent.SubscriberCount);
+
+		// Stage 5 - Remove local handler
+		weakEvent.Unsubscribe(syncHandler);
+		Assert.Equal(0, weakEvent.SubscriberCount);
 	}
 
 	private class NonGenericSubscriber(Action onEvent)

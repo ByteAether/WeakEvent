@@ -151,6 +151,11 @@ public abstract class WeakEventBase
 	private readonly SemaphoreSlim _lock = new(1, 1);
 
 	/// <summary>
+	/// Number of alive subscribers currently registered to the event.
+	/// </summary>
+	public int SubscriberCount => _handlers.Count(x => x.IsAlive);
+
+	/// <summary>
 	/// Subscribes the specified delegate handler to the event.
 	/// </summary>
 	/// <param name="handler">

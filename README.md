@@ -77,6 +77,8 @@ public record MyEventData(string Message);
 ## API
 
 ### `WeakEvent`
+ * `SubscriberCount`\
+   Number of alive subscribers currently registered to the event.
  * `Subscribe(Action handler)`\
    `Subscribe(Func<Task> handler)`\
    `Subscribe(Func<CancellationToken, Task> handler)`\
@@ -89,6 +91,8 @@ public record MyEventData(string Message);
    Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
 
 ### `WeakEvent<TEvent>`
+ * `SubscriberCount`\
+   Number of alive subscribers currently registered to the event.
  * `Subscribe(Action<TEvent> handler)`\
    `Subscribe(Func<TEvent, Task> handler)`\
    `Subscribe(Func<TEvent, CancellationToken, Task> handler)`\
