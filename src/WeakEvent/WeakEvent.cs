@@ -193,13 +193,18 @@ public abstract class WeakEventBase
 	{
 		await _lock.WaitAsync(cancellationToken);
 
-		_handlers.RemoveAll(x => !x.IsAlive);
-
-		foreach (var handler in _handlers)
+		try
 		{
-			await handler.InvokeAsync(args, cancellationToken);
-		}
+			_handlers.RemoveAll(x => !x.IsAlive);
 
-		_lock.Release();
+			foreach (var handler in _handlers)
+			{
+				await handler.InvokeAsync(args, cancellationToken);
+			}
+		}
+		finally
+		{
+			_lock.Release();
+		}
 	}
 }
