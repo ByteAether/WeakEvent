@@ -153,7 +153,21 @@ public abstract class WeakEventBase
 	/// <summary>
 	/// Number of alive subscribers currently registered to the event.
 	/// </summary>
-	public int SubscriberCount => _handlers.Count(x => x.IsAlive);
+	public int SubscriberCount
+	{
+		get
+		{
+			_lock.Wait();
+			try
+			{
+				return _handlers.Count(x => x.IsAlive);
+			}
+			finally
+			{
+				_lock.Release();
+			}
+		}
+	}
 
 	/// <summary>
 	/// Subscribes the specified delegate handler to the event.
@@ -170,7 +184,15 @@ public abstract class WeakEventBase
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		_handlers.Add(new WeakEventHandler(handler));
+		_lock.Wait();
+		try
+		{
+			_handlers.Add(new WeakEventHandler(handler));
+		}
+		finally
+		{
+			_lock.Release();
+		}
 	}
 
 	/// <summary>
@@ -185,7 +207,15 @@ public abstract class WeakEventBase
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
+		_lock.Wait();
+		try
+		{
+			return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
+		}
+		finally
+		{
+			_lock.Release();
+		}
 	}
 
 	/// <summary>
@@ -196,20 +226,22 @@ public abstract class WeakEventBase
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
 	protected async Task PublishAsync(List<object?> args, CancellationToken cancellationToken = default)
 	{
+		List<WeakEventHandler> handlers;
 		await _lock.WaitAsync(cancellationToken);
 
 		try
 		{
 			_handlers.RemoveAll(x => !x.IsAlive);
-
-			foreach (var handler in _handlers)
-			{
-				await handler.InvokeAsync(args, cancellationToken);
-			}
+			handlers = [.._handlers];
 		}
 		finally
 		{
 			_lock.Release();
+		}
+
+		foreach (var handler in handlers)
+		{
+			await handler.InvokeAsync(args, cancellationToken);
 		}
 	}
 }
