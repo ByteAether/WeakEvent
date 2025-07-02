@@ -147,8 +147,7 @@ public class WeakEvent : WeakEventBase
 public abstract class WeakEventBase
 {
 	private readonly List<WeakEventHandler> _handlers = [];
-
-	private readonly SemaphoreSlim _lock = new(1, 1);
+	private readonly ReaderWriterLockSlim _rwLock = new();
 
 	/// <summary>
 	/// Number of alive subscribers currently registered to the event.
@@ -157,14 +156,14 @@ public abstract class WeakEventBase
 	{
 		get
 		{
-			_lock.Wait();
+			_rwLock.EnterReadLock();
 			try
 			{
 				return _handlers.Count(x => x.IsAlive);
 			}
 			finally
 			{
-				_lock.Release();
+				_rwLock.ExitReadLock();
 			}
 		}
 	}
@@ -184,14 +183,14 @@ public abstract class WeakEventBase
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		_lock.Wait();
+		_rwLock.EnterWriteLock();
 		try
 		{
 			_handlers.Add(new WeakEventHandler(handler));
 		}
 		finally
 		{
-			_lock.Release();
+			_rwLock.ExitWriteLock();
 		}
 	}
 
@@ -207,14 +206,14 @@ public abstract class WeakEventBase
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		_lock.Wait();
+		_rwLock.EnterWriteLock();
 		try
 		{
 			return _handlers.RemoveAll(weh => weh.Matches(handler)) > 0;
 		}
 		finally
 		{
-			_lock.Release();
+			_rwLock.ExitWriteLock();
 		}
 	}
 
@@ -227,17 +226,31 @@ public abstract class WeakEventBase
 	protected async Task PublishAsync(List<object?> args, CancellationToken cancellationToken = default)
 	{
 		List<WeakEventHandler> handlers;
-		await _lock.WaitAsync(cancellationToken);
+
+		_rwLock.EnterUpgradeableReadLock();
 
 		try
 		{
-			_handlers.RemoveAll(x => !x.IsAlive);
-			handlers = [.._handlers];
+			cancellationToken.ThrowIfCancellationRequested();
+			_rwLock.EnterWriteLock();
+
+			try
+			{
+				_handlers.RemoveAll(x => !x.IsAlive);
+			}
+			finally
+			{
+				_rwLock.ExitWriteLock();
+			}
+
+			handlers = [.. _handlers];
 		}
 		finally
 		{
-			_lock.Release();
+			_rwLock.ExitUpgradeableReadLock();
 		}
+
+		cancellationToken.ThrowIfCancellationRequested();
 
 		foreach (var handler in handlers)
 		{
