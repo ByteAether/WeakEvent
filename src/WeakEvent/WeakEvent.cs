@@ -232,15 +232,18 @@ public abstract class WeakEventBase
 		try
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			_rwLock.EnterWriteLock();
-
-			try
+			
+			if (_handlers.Any(x => !x.IsAlive))
 			{
-				_handlers.RemoveAll(x => !x.IsAlive);
-			}
-			finally
-			{
-				_rwLock.ExitWriteLock();
+				_rwLock.EnterWriteLock();
+				try
+				{
+					_handlers.RemoveAll(x => !x.IsAlive);
+				}
+				finally
+				{
+					_rwLock.ExitWriteLock();
+				}
 			}
 
 			handlers = [.. _handlers];
