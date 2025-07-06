@@ -1,4 +1,5 @@
 ﻿namespace ByteAether.WeakEvent.Tests;
+
 public class WeakEventHandlerTests
 {
 	[Fact]
@@ -27,10 +28,7 @@ public class WeakEventHandlerTests
 	}
 
 	private static bool _staticInvoked;
-	private static void StaticHandler()
-	{
-		_staticInvoked = true;
-	}
+	private static void StaticHandler() => _staticInvoked = true;
 
 	[Fact]
 	public async Task InstanceHandler_InvokeAsync_Void()
@@ -121,7 +119,7 @@ public class WeakEventHandlerTests
 	private class Subscriber
 	{
 		public bool Invoked { get; private set; }
-		public bool ThrowIfInvoked { get; set; }
+		public bool ThrowIfInvoked { get; init; }
 
 		public void InstanceHandler()
 		{

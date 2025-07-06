@@ -1,4 +1,5 @@
 ﻿namespace ByteAether.WeakEvent.Tests;
+
 public class WeakEventNonGenericTests
 {
 	[Fact]
@@ -19,7 +20,7 @@ public class WeakEventNonGenericTests
 	public void Unsubscribe_NonExistentHandler_DoesNotThrow()
 	{
 		var weakEvent = new WeakEvent();
-		Action handler = () => { };
+		var handler = () => { };
 		var exception = Record.Exception(() => Assert.False(weakEvent.Unsubscribe(handler)));
 		Assert.Null(exception);
 	}
@@ -33,9 +34,9 @@ public class WeakEventNonGenericTests
 		weakEvent.Subscribe(() => handlerInvoked = true);
 		// Cancel the token immediately so that any wait operation observes the cancellation
 		using var cts = new CancellationTokenSource();
-		cts.Cancel();
+		await cts.CancelAsync();
 
-		// Assert that publishing an event with the cancelled token throws the expected exception.
+		// Assert that publishing an event with the canceled token throws the expected exception.
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(
 			() => weakEvent.PublishAsync(cts.Token)
 		);
@@ -51,12 +52,14 @@ public class WeakEventNonGenericTests
 		{
 			count += 1;
 		}
+
 		async Task asyncHandler()
 		{
 			count += 2;
 			await Task.CompletedTask;
 		}
-		async Task asyncHandlerCT(CancellationToken ct)
+
+		async Task asyncHandlerCt(CancellationToken ct)
 		{
 			count += 4;
 			await Task.CompletedTask;
@@ -66,11 +69,11 @@ public class WeakEventNonGenericTests
 
 		weakEvent.Subscribe(syncHandler);
 		weakEvent.Subscribe(asyncHandler);
-		weakEvent.Subscribe(asyncHandlerCT);
+		weakEvent.Subscribe(asyncHandlerCt);
 
 		weakEvent.Unsubscribe(syncHandler);
 		weakEvent.Unsubscribe(asyncHandler);
-		weakEvent.Unsubscribe(asyncHandlerCT);
+		weakEvent.Unsubscribe(asyncHandlerCt);
 
 		await weakEvent.PublishAsync();
 
@@ -86,12 +89,14 @@ public class WeakEventNonGenericTests
 		{
 			count += 1;
 		}
+
 		async Task asyncHandler()
 		{
 			count += 2;
 			await Task.CompletedTask;
 		}
-		async Task asyncHandlerCT(CancellationToken ct)
+
+		async Task asyncHandlerCt(CancellationToken ct)
 		{
 			count += 4;
 			await Task.CompletedTask;
@@ -101,7 +106,7 @@ public class WeakEventNonGenericTests
 
 		weakEvent.Subscribe(syncHandler);
 		weakEvent.Subscribe(asyncHandler);
-		weakEvent.Subscribe(asyncHandlerCT);
+		weakEvent.Subscribe(asyncHandlerCt);
 
 		await weakEvent.PublishAsync();
 
@@ -121,13 +126,14 @@ public class WeakEventNonGenericTests
 			await weakEvent.PublishAsync();
 			// The subscriber goes out of scope after this method, allowing it to be GC’d.
 		}
+
 		await createSubscriberAndInvoke(weakEvent, () => callCount++);
 
 		// Force garbage collection to reclaim the subscriber instance.
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
 
-		// Invoke second time
+		// Invoke a second time
 		await weakEvent.PublishAsync();
 
 		// Just one call should happen instead of 2
@@ -144,6 +150,7 @@ public class WeakEventNonGenericTests
 		// Stage 2 - Add local handler
 		void syncHandler()
 		{ }
+
 		weakEvent.Subscribe(syncHandler);
 		Assert.Equal(1, weakEvent.SubscriberCount);
 
@@ -154,6 +161,7 @@ public class WeakEventNonGenericTests
 			weakEvent.Subscribe(subscriber.Handler);
 			Assert.Equal(2, weakEvent.SubscriberCount);
 		}
+
 		createSubscriberAndAssert();
 
 		// Stage 4 - Force garbage collection to reclaim the garbage-collectable subscriber instance.
@@ -170,9 +178,6 @@ public class WeakEventNonGenericTests
 	{
 		private readonly Action _onEvent = onEvent;
 
-		public void Handler()
-		{
-			_onEvent();
-		}
+		public void Handler() => _onEvent();
 	}
 }
