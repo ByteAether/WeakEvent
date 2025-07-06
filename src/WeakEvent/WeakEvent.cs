@@ -32,7 +32,7 @@ public class WeakEvent<TEvent> : WeakEventBase
 	public void Subscribe(Func<TEvent, Task> handler) => base.Subscribe(handler);
 
 	/// <summary>
-	/// Subscribes the specified async handler with cancellation token to the event.
+	/// Subscribes the specified async handler with a cancellation token to the event.
 	/// </summary>
 	/// <param name="handler">
 	/// The handler to subscribe. It will be invoked when the event is raised,
@@ -68,7 +68,8 @@ public class WeakEvent<TEvent> : WeakEventBase
 	/// </summary>
 	/// <param name="eventData">The event data to publish to the subscribers.</param>
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	public Task PublishAsync(TEvent eventData, CancellationToken cancellationToken = default) => base.PublishAsync([eventData], cancellationToken);
+	public Task PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)
+		=> base.PublishAsync([eventData], cancellationToken);
 }
 
 /// <summary>
@@ -102,7 +103,7 @@ public class WeakEvent : WeakEventBase
 	public void Subscribe(Func<Task> handler) => base.Subscribe(handler);
 
 	/// <summary>
-	/// Subscribes the specified async handler with cancellation token to the event.
+	/// Subscribes the specified async handler with a cancellation token to the event.
 	/// </summary>
 	/// <param name="handler">
 	/// The handler to subscribe. It will be invoked when the event is raised,
@@ -150,7 +151,7 @@ public abstract class WeakEventBase
 	private readonly ReaderWriterLockSlim _rwLock = new();
 
 	/// <summary>
-	/// Number of alive subscribers currently registered to the event.
+	/// Number of living subscribers currently registered to the event.
 	/// </summary>
 	public int SubscriberCount
 	{
@@ -232,7 +233,7 @@ public abstract class WeakEventBase
 		try
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			
+
 			if (_handlers.Any(x => !x.IsAlive))
 			{
 				_rwLock.EnterWriteLock();
