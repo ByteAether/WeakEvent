@@ -39,7 +39,7 @@ jobs:
             9.x
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/workflows/codeql/codeql-config.yml
@@ -51,6 +51,6 @@ jobs:
           dotnet build --no-incremental --configuration Release src/WeakEvent/WeakEvent.csproj
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{matrix.language}}"
