@@ -27,7 +27,7 @@ jobs:
       run: dotnet pack --configuration Release /p:ContinuousIntegrationBuild=true /p:PackageVersion=${{ steps.version.outputs.version-without-v }} /p:PackageReleaseNotes="See https://github.com/ByteAether/WeakEvent/releases/tag/${{ github.event.release.tag_name }}" --output ./output src/WeakEvent/WeakEvent.csproj
 
     - name: Upload NuGet package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: nuget-package
         path: ./output/*.nupkg
