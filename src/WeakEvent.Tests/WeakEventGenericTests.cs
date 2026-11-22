@@ -114,6 +114,62 @@ public class WeakEventGenericTests
 	}
 
 	[Fact]
+	public async Task CancellationTokenHandler_DoesNotAlterArgumentsForFollowingHandler()
+	{
+		var weakEvent = new WeakEvent<string>();
+		var tokenHandlerCalled = false;
+		var syncHandlerCalled = false;
+
+		weakEvent.Subscribe(
+			(string _, CancellationToken _) =>
+			{
+				tokenHandlerCalled = true;
+				return Task.CompletedTask;
+			}
+		);
+		weakEvent.Subscribe((string _) => syncHandlerCalled = true);
+
+		await weakEvent.PublishAsync("Test event");
+
+		Assert.True(tokenHandlerCalled);
+		Assert.True(syncHandlerCalled);
+	}
+
+	[Fact]
+	public async Task PublishAsync_CancellationBetweenHandlers_StopsDispatch()
+	{
+		var weakEvent = new WeakEvent<string>();
+		using var cancellationTokenSource = new CancellationTokenSource();
+		var secondHandlerCalled = false;
+
+		weakEvent.Subscribe((string _) => cancellationTokenSource.Cancel());
+		weakEvent.Subscribe((string _) => secondHandlerCalled = true);
+
+		await Assert.ThrowsAnyAsync<OperationCanceledException>(
+			() => weakEvent.PublishAsync("Test event", cancellationTokenSource.Token)
+		);
+		Assert.False(secondHandlerCalled);
+	}
+
+	[Fact]
+	public async Task PublishAsync_SynchronousHandlerException_IsNotWrapped()
+	{
+		var weakEvent = new WeakEvent<string>();
+		weakEvent.Subscribe((Action<string>)(_ => throw new TestException()));
+
+		await Assert.ThrowsAsync<TestException>(() => weakEvent.PublishAsync("Test event"));
+	}
+
+	[Fact]
+	public async Task PublishAsync_AsyncHandlerReturningNull_ThrowsInvalidOperationException()
+	{
+		var weakEvent = new WeakEvent<string>();
+		weakEvent.Subscribe((Func<string, Task>)(_ => null!));
+
+		await Assert.ThrowsAsync<InvalidOperationException>(() => weakEvent.PublishAsync("Test event"));
+	}
+
+	[Fact]
 	public async Task DeadHandler_IsNotInvoked_AfterGarbageCollection()
 	{
 		var weakEvent = new WeakEvent<string>();
@@ -179,4 +235,6 @@ public class WeakEventGenericTests
 
 		public void Handler(string _) => _onEvent();
 	}
+
+	private sealed class TestException : Exception;
 }
