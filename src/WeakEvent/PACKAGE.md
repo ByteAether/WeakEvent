@@ -18,6 +18,15 @@ WeakEvent is a lightweight .NET library that implements the weak event pattern u
 - **Automatic Cleanup:** Dead subscribers are removed automatically during event publishing.
 - **Simple API:** Intuitive methods for subscribing, unsubscribing, and publishing events.
 
+## Publication behavior
+
+- Subscribers are invoked sequentially in subscription order.
+- Publishing uses a subscriber snapshot taken when publication starts. Subscribing or unsubscribing during publication affects later publications, not the current one.
+- Cancellation is observed before each subscriber is invoked. Cancellation-aware subscribers receive the token passed to `PublishAsync`.
+- Static handlers remain alive for the lifetime of the event source. Instance handlers, including capturing lambdas, are held weakly.
+- Synchronous exceptions propagate as their original exception type, while asynchronous exceptions are propagated after awaiting the handler.
+- Multicast delegates subscribe and unsubscribe their individual invocations.
+
 ## Installation
 
 Install via NuGet:
@@ -73,11 +82,11 @@ public record MyEventData(string Message);
  * `Subscribe(Action handler)`\
    `Subscribe(Func<Task> handler)`\
    `Subscribe(Func<CancellationToken, Task> handler)`\
-   Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
+   Subscribes the specified handler to the event. A multicast delegate subscribes each invocation. The handlers will be invoked when the event is raised, provided that their targets are still alive.
  * `Unsubscribe(Action handler)`\
    `Unsubscribe(Func<Task> handler)`\
    `Unsubscribe(Func<CancellationToken, Task> handler)`\
-   Unsubscribes the specified handler from the event.
+   Unsubscribes the specified handler from the event. A multicast delegate unsubscribes all matching invocations.
  * `PublishAsync(CancellationToken cancellationToken = default)`\
    Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
 
@@ -87,10 +96,10 @@ public record MyEventData(string Message);
  * `Subscribe(Action<TEvent> handler)`\
    `Subscribe(Func<TEvent, Task> handler)`\
    `Subscribe(Func<TEvent, CancellationToken, Task> handler)`\
-   Subscribes the specified handler to the event. The handler will be invoked when the event is raised, provided that its target is still alive.
+   Subscribes the specified handler to the event. A multicast delegate subscribes each invocation. The handlers will be invoked when the event is raised, provided that their targets are still alive.
  * `Unsubscribe(Action<TEvent> handler)`\
    `Unsubscribe(Func<TEvent, Task> handler)`\
    `Unsubscribe(Func<TEvent, CancellationToken, Task> handler)`\
-   Unsubscribes the specified handler from the event.
+   Unsubscribes the specified handler from the event. A multicast delegate unsubscribes all matching invocations.
  * `PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
    Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
