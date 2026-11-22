@@ -224,12 +224,15 @@ public abstract class WeakEventBase
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		var weakHandler = createHandler(handler);
+		var handlers = handler
+			.GetInvocationList()
+			.Select(invocation => createHandler((TDelegate)invocation))
+			.ToArray();
 
 		_rwLock.EnterWriteLock();
 		try
 		{
-			_handlers.Add(weakHandler);
+			_handlers.AddRange(handlers);
 		}
 		finally
 		{
@@ -249,10 +252,14 @@ public abstract class WeakEventBase
 			throw new ArgumentNullException(nameof(handler));
 		}
 
+		var handlers = handler.GetInvocationList();
+
 		_rwLock.EnterWriteLock();
 		try
 		{
-			return _handlers.RemoveAll(weakHandler => weakHandler.Matches(handler)) > 0;
+			return _handlers.RemoveAll(
+				weakHandler => handlers.Any(weakHandler.Matches)
+			) > 0;
 		}
 		finally
 		{
