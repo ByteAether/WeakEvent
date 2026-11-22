@@ -90,6 +90,14 @@ internal readonly struct WeakEventHandler
 		where TDelegate : Delegate
 	{
 		ThrowIfNull(handler);
+
+		// Delegates for static methods and open-instance methods both have no target.
+		// Retaining those delegates is safe and avoids reconstructing them as static delegates.
+		if (handler.Target == null)
+		{
+			return CreateTargetless(handler, invoke);
+		}
+
 		var method = handler.Method;
 
 		return new WeakEventHandler(
@@ -99,13 +107,20 @@ internal readonly struct WeakEventHandler
 		);
 	}
 
+	private static WeakEventHandler CreateTargetless<TDelegate>(
+		TDelegate handler,
+		Func<TDelegate, object?, CancellationToken, Task> invoke
+	)
+		where TDelegate : Delegate
+		=> new(
+			handler,
+			(_, eventData, cancellationToken) =>
+				invoke(handler, eventData, cancellationToken)
+		);
+
 	private static TDelegate GetDelegate<TDelegate>(MethodInfo method, object? target)
 		where TDelegate : Delegate
-		=> (TDelegate)(
-			target == null
-				? Delegate.CreateDelegate(typeof(TDelegate), method)
-				: Delegate.CreateDelegate(typeof(TDelegate), target, method)
-		);
+		=> (TDelegate)Delegate.CreateDelegate(typeof(TDelegate), target!, method);
 
 	private static Task RequireTask(Task? task)
 		=> task ?? throw new InvalidOperationException("An asynchronous event handler returned a null Task.");

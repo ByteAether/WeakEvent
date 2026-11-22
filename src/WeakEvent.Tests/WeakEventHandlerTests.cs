@@ -96,8 +96,7 @@ public class WeakEventHandlerTests
 		var weakHandler = CreateWeakSubscriber();
 
 		// Act
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
+		CollectGarbage();
 
 		var isAliveBefore = weakHandler.IsAlive;
 		await weakHandler.InvokeAsync(null);
@@ -140,6 +139,15 @@ public class WeakEventHandlerTests
 
 			Invoked = true;
 			await Task.CompletedTask;
+		}
+	}
+
+	private static void CollectGarbage()
+	{
+		for (var i = 0; i < 3; i++)
+		{
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
 		}
 	}
 }
