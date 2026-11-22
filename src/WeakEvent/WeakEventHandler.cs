@@ -81,7 +81,7 @@ internal readonly struct WeakEventHandler
 	}
 
 	public bool Matches(Delegate handler)
-		=> _weakTarget?.Target == handler.Target && _method.Equals(handler.Method);
+		=> ReferenceEquals(_weakTarget?.Target, handler.Target) && _method.Equals(handler.Method);
 
 	private static WeakEventHandler Create<TDelegate>(
 		TDelegate handler,
