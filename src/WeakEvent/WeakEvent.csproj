@@ -6,28 +6,32 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-	<RootNamespace>ByteAether.WeakEvent</RootNamespace>
-	
-	<Deterministic>True</Deterministic>
-	<GenerateDocumentationFile>True</GenerateDocumentationFile>
-	<IncludeSymbols>True</IncludeSymbols>
-	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-	
-	<Title>WeakEvent</Title>
-	<Authors>Joonatan Uusväli</Authors>
-	<Company>ByteAether</Company>
-	<Description>Weakly referenced event subscribers. Keep your .NET events lean and memory-safe.</Description>
-	<PackageProjectUrl>https://github.com/ByteAether/WeakEvent</PackageProjectUrl>
-	<RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
-	<RepositoryType>git</RepositoryType>
-	
-	<PackageId>ByteAether.WeakEvent</PackageId>
-	<PackageTags>weak;event;manager;handler;weak-event;weak-event-manager;weak-event-handler;WeakEvent;WeakEventManager;WeakEventHandler;blazor</PackageTags>
-	<PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
-	<PackageLicenseFile>LICENSE</PackageLicenseFile>
-	<PackageIcon>logo.png</PackageIcon>
+    <RootNamespace>ByteAether.WeakEvent</RootNamespace>
+
+    <Deterministic>True</Deterministic>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <Title>ByteAether Weak Event Manager for .NET</Title>
+    <Description>A lightweight .NET weak event manager for weak event subscriptions with synchronous and asynchronous handlers. Instance subscribers are held by weak references, allowing the garbage collector to reclaim unused objects and prevent memory leaks in applications such as Blazor. Supports events with or without data and cancellation-aware publishing.</Description>
+    <Authors>Joonatan Uusväli</Authors>
+    <Company>ByteAether</Company>
+    <Copyright>© $(Authors), $(Company). All rights reserved.</Copyright>
+
+    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <PackageId>ByteAether.WeakEvent</PackageId>
+    <PackageType>Library</PackageType>
+    <PackageSummary>Weak Event Manager for .NET, with synchronous and asynchronous handlers, weak references, and automatic dead-subscriber cleanup.</PackageSummary>
+    <PackageTags>weak;event;manager;handler;weak-event;weak-event-pattern;weak-event-manager;weak-event-handler;weak-references;garbage-collection;memory-leak;blazor;dotnet;csharp</PackageTags>
+    <PackageProjectUrl>https://github.com/ByteAether/WeakEvent</PackageProjectUrl>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageIcon>logo_weakevent.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
@@ -37,10 +41,10 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
-	<None Include="..\..\assets\logo.png">
-	  <Pack>True</Pack>
-	  <PackagePath>\</PackagePath>
-	</None>
+    <None Include="..\..\assets\logo_weakevent.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

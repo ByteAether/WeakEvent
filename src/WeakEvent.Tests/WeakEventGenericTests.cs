@@ -1,4 +1,6 @@
-﻿namespace ByteAether.WeakEvent.Tests;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace ByteAether.WeakEvent.Tests;
 
 public class WeakEventGenericTests
 {
@@ -37,8 +39,7 @@ public class WeakEventGenericTests
 		await cts.CancelAsync();
 
 		// Assert that publishing an event with the canceled token throws the expected exception.
-		await Assert.ThrowsAnyAsync<OperationCanceledException>(
-			() => weakEvent.PublishAsync("Test event", cts.Token)
+		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => weakEvent.PublishAsync("Test event", cts.Token)
 		);
 		Assert.False(handlerInvoked, "The subscribed handler should not be invoked when cancellation is requested.");
 	}
@@ -120,14 +121,13 @@ public class WeakEventGenericTests
 		var tokenHandlerCalled = false;
 		var syncHandlerCalled = false;
 
-		weakEvent.Subscribe(
-			(string _, CancellationToken _) =>
+		weakEvent.Subscribe((_, _) =>
 			{
 				tokenHandlerCalled = true;
 				return Task.CompletedTask;
 			}
 		);
-		weakEvent.Subscribe((string _) => syncHandlerCalled = true);
+		weakEvent.Subscribe(_ => syncHandlerCalled = true);
 
 		await weakEvent.PublishAsync("Test event");
 
@@ -136,17 +136,18 @@ public class WeakEventGenericTests
 	}
 
 	[Fact]
+	[SuppressMessage("ReSharper", "AccessToDisposedClosure")]
 	public async Task PublishAsync_CancellationBetweenHandlers_StopsDispatch()
 	{
 		var weakEvent = new WeakEvent<string>();
 		using var cancellationTokenSource = new CancellationTokenSource();
 		var secondHandlerCalled = false;
 
-		weakEvent.Subscribe((string _) => cancellationTokenSource.Cancel());
-		weakEvent.Subscribe((string _) => secondHandlerCalled = true);
+		weakEvent.Subscribe(_ => cancellationTokenSource.Cancel());
+		weakEvent.Subscribe(_ => secondHandlerCalled = true);
 
-		await Assert.ThrowsAnyAsync<OperationCanceledException>(
-			() => weakEvent.PublishAsync("Test event", cancellationTokenSource.Token)
+		await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+			weakEvent.PublishAsync("Test event", cancellationTokenSource.Token)
 		);
 		Assert.False(secondHandlerCalled);
 	}
@@ -158,7 +159,7 @@ public class WeakEventGenericTests
 		var invocationCount = 0;
 		Action<string> firstHandler = _ => invocationCount++;
 		Action<string> secondHandler = _ => invocationCount++;
-		Action<string> combinedHandler = firstHandler + secondHandler;
+		var combinedHandler = firstHandler + secondHandler;
 
 		weakEvent.Subscribe(combinedHandler);
 		Assert.Equal(2, weakEvent.SubscriberCount);
@@ -225,7 +226,8 @@ public class WeakEventGenericTests
 
 		// Stage 2 - Add local handler
 		void syncHandler(string _)
-		{ }
+		{
+		}
 
 		weakEvent.Subscribe(syncHandler);
 
