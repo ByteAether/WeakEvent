@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ByteAether.WeakEvent.Tests;
 
@@ -196,19 +197,10 @@ public class WeakEventGenericTests
 		var weakEvent = new WeakEvent<string>();
 		var callCount = 0;
 
-		static async Task createSubscriberAndInvoke(WeakEvent<string> weakEvent, Action onEvent)
-		{
-			var subscriber = new GenericSubscriber(onEvent);
-			weakEvent.Subscribe(subscriber.Handler);
-			await weakEvent.PublishAsync("Test");
-			// The subscriber goes out of scope after this method, allowing it to be GC’d.
-		}
-
-		await createSubscriberAndInvoke(weakEvent, () => callCount++);
+		await SubscribeAndInvokeAsync(weakEvent, () => callCount++);
 
 		// Force garbage collection to reclaim the subscriber instance.
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
+		CollectGarbage();
 
 		// Invoke a second time
 		await weakEvent.PublishAsync("Test");
@@ -232,23 +224,67 @@ public class WeakEventGenericTests
 		weakEvent.Subscribe(syncHandler);
 
 		// Stage 3 - Add a garbage-collected handler
-		void createSubscriberAndAssert()
-		{
-			var subscriber = new GenericSubscriber(() => { });
-			weakEvent.Subscribe(subscriber.Handler);
-			Assert.Equal(2, weakEvent.SubscriberCount);
-		}
-
-		createSubscriberAndAssert();
+		SubscribeAndAssert(weakEvent);
 
 		// Stage 4 - Force garbage collection to reclaim the garbage-collectable subscriber instance.
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
+		CollectGarbage();
 		Assert.Equal(1, weakEvent.SubscriberCount);
 
 		// Stage 5 - Remove local handler
 		weakEvent.Unsubscribe(syncHandler);
 		Assert.Equal(0, weakEvent.SubscriberCount);
+	}
+
+	[Fact]
+	public async Task OpenInstanceHandler_IsInvoked()
+	{
+		var weakEvent = new WeakEvent<OpenInstanceSubscriber>();
+		var method = typeof(OpenInstanceSubscriber).GetMethod(nameof(OpenInstanceSubscriber.Handler))!;
+		var handler = (Action<OpenInstanceSubscriber>)Delegate.CreateDelegate(
+			typeof(Action<OpenInstanceSubscriber>),
+			method
+		);
+		var subscriber = new OpenInstanceSubscriber();
+
+		weakEvent.Subscribe(handler);
+		await weakEvent.PublishAsync(subscriber);
+
+		Assert.Equal(1, subscriber.CallCount);
+	}
+
+	private class OpenInstanceSubscriber
+	{
+		public int CallCount { get; private set; }
+
+		public void Handler() => CallCount++;
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private static async Task SubscribeAndInvokeAsync(WeakEvent<string> weakEvent, Action onEvent)
+	{
+		var subscriber = new GenericSubscriber(onEvent);
+		weakEvent.Subscribe(subscriber.Handler);
+		await weakEvent.PublishAsync("Test");
+		GC.KeepAlive(subscriber);
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private static void SubscribeAndAssert(WeakEvent<string> weakEvent)
+	{
+		var subscriber = new GenericSubscriber(() => { });
+		weakEvent.Subscribe(subscriber.Handler);
+		Assert.Equal(2, weakEvent.SubscriberCount);
+		GC.KeepAlive(subscriber);
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private static void CollectGarbage()
+	{
+		for (var i = 0; i < 3; i++)
+		{
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+		}
 	}
 
 	private class GenericSubscriber(Action onEvent)

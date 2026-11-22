@@ -1,4 +1,6 @@
-﻿namespace ByteAether.WeakEvent.Tests;
+﻿using System.Runtime.CompilerServices;
+
+namespace ByteAether.WeakEvent.Tests;
 
 public class WeakEventNonGenericTests
 {
@@ -119,19 +121,10 @@ public class WeakEventNonGenericTests
 		var weakEvent = new WeakEvent();
 		var callCount = 0;
 
-		static async Task createSubscriberAndInvoke(WeakEvent weakEvent, Action onEvent)
-		{
-			var subscriber = new NonGenericSubscriber(onEvent);
-			weakEvent.Subscribe(subscriber.Handler);
-			await weakEvent.PublishAsync();
-			// The subscriber goes out of scope after this method, allowing it to be GC’d.
-		}
-
-		await createSubscriberAndInvoke(weakEvent, () => callCount++);
+		await SubscribeAndInvokeAsync(weakEvent, () => callCount++);
 
 		// Force garbage collection to reclaim the subscriber instance.
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
+		CollectGarbage();
 
 		// Invoke a second time
 		await weakEvent.PublishAsync();
@@ -155,23 +148,43 @@ public class WeakEventNonGenericTests
 		Assert.Equal(1, weakEvent.SubscriberCount);
 
 		// Stage 3 - Add a garbage-collected handler
-		void createSubscriberAndAssert()
-		{
-			var subscriber = new NonGenericSubscriber(() => { });
-			weakEvent.Subscribe(subscriber.Handler);
-			Assert.Equal(2, weakEvent.SubscriberCount);
-		}
-
-		createSubscriberAndAssert();
+		SubscribeAndAssert(weakEvent);
 
 		// Stage 4 - Force garbage collection to reclaim the garbage-collectable subscriber instance.
-		GC.Collect();
-		GC.WaitForPendingFinalizers();
+		CollectGarbage();
 		Assert.Equal(1, weakEvent.SubscriberCount);
 
 		// Stage 5 - Remove local handler
 		weakEvent.Unsubscribe(syncHandler);
 		Assert.Equal(0, weakEvent.SubscriberCount);
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private static async Task SubscribeAndInvokeAsync(WeakEvent weakEvent, Action onEvent)
+	{
+		var subscriber = new NonGenericSubscriber(onEvent);
+		weakEvent.Subscribe(subscriber.Handler);
+		await weakEvent.PublishAsync();
+		GC.KeepAlive(subscriber);
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private static void SubscribeAndAssert(WeakEvent weakEvent)
+	{
+		var subscriber = new NonGenericSubscriber(() => { });
+		weakEvent.Subscribe(subscriber.Handler);
+		Assert.Equal(2, weakEvent.SubscriberCount);
+		GC.KeepAlive(subscriber);
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private static void CollectGarbage()
+	{
+		for (var i = 0; i < 3; i++)
+		{
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+		}
 	}
 
 	private class NonGenericSubscriber(Action onEvent)
