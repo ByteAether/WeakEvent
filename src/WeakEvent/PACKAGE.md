@@ -7,25 +7,28 @@
 [![GitHub Build Status](https://img.shields.io/github/actions/workflow/status/ByteAether/WeakEvent/build-and-test.yml?logo=github&label=Build%20%26%20Test)](https://github.com/ByteAether/WeakEvent/actions/workflows/build-and-test.yml)
 [![GitHub Security](https://img.shields.io/github/actions/workflow/status/ByteAether/WeakEvent/codeql.yml?logo=github&label=Security%20Validation)](https://github.com/ByteAether/WeakEvent/actions/workflows/codeql.yml)
 
-WeakEvent is a lightweight .NET library that implements the weak event pattern using weak references. It ensures that event subscribers don't prevent garbage collection, avoiding memory leaks.
+WeakEvent is a lightweight .NET implementation of the weak event pattern. A normal event can keep an inactive subscriber alive because the publisher holds a reference to its handler. WeakEvent breaks that retention by storing instance handlers with weak references, allowing subscriber objects to be reclaimed when no longer used elsewhere, even if they have not explicitly unsubscribed.
+
+The library fits applications where long-lived publishers notify short-lived or repeatedly created subscribers, such as UI components, desktop applications, background services, and Blazor components. It supports synchronous and asynchronous handlers, notifications with or without payload data, and cancellation-aware publishing. Static handlers remain alive for the lifetime of the event source, while dead instance subscriptions are ignored and cleaned up during publication.
 
 ## Key Features
 
 ![.NET Standard 2.0](https://img.shields.io/badge/.NET_Standard-2.0-brightgreen)
 
 - **Weak References:** Subscribers are held weakly so they can be garbage-collected when no longer in use.
-- **Events With or Without Data:** Choose between `WeakEvent` for notifications without data and `WeakEvent<TEvent>` for events that pass data.
-- **Automatic Cleanup:** Dead subscribers are removed automatically during event publishing.
-- **Simple API:** Intuitive methods for subscribing, unsubscribing, and publishing events.
+- **Events With or Without Payloads:** Use `WeakEvent` for notifications or `WeakEvent<TEvent>` to pass event data.
+- **Synchronous and Asynchronous Handlers:** Subscribe with `Action`, `Func<Task>`, or a cancellation-aware async delegate.
+- **Automatic Cleanup:** Dead subscribers are removed during publication.
+- **Simple API:** Methods for subscribing, unsubscribing, and publishing.
 
 ## Publication behavior
 
 - Subscribers are invoked sequentially in subscription order.
-- Publishing uses a subscriber snapshot taken when publication starts. Subscribing or unsubscribing during publication affects later publications, not the current one.
-- Cancellation is observed before each subscriber is invoked. Cancellation-aware subscribers receive the token passed to `PublishAsync`.
+- Publication uses a subscriber snapshot captured when it starts. Subscribing or unsubscribing during publication affects later publications, not the current one.
+- Cancellation is checked before publication starts and before each subscriber is invoked. Cancellation-aware handlers receive the token passed to `PublishAsync`.
 - Static handlers remain alive for the lifetime of the event source. Instance handlers, including capturing lambdas, are held weakly.
-- Synchronous exceptions propagate as their original exception type, while asynchronous exceptions are propagated after awaiting the handler.
-- Multicast delegates subscribe and unsubscribe their individual invocations.
+- Synchronous handler exceptions propagate unchanged. Asynchronous handler exceptions propagate after the returned task is awaited.
+- Each invocation in a multicast delegate is subscribed independently and can be unsubscribed as a group.
 
 ## Installation
 
@@ -44,14 +47,14 @@ Use the `--version` option to specify a [preview version](https://www.nuget.org/
 ```csharp
 using ByteAether.WeakEvent;
 
-// Create an instance of the weak event without event data
+// Create an event without payload data.
 var myEvent = new WeakEvent();
 
-// Create a subscriber and subscribe
+// Create and subscribe a handler.
 var subscriber = () => Console.WriteLine("Event received!");
 myEvent.Subscribe(subscriber);
 
-// Raise the event
+// Publish the event.
 await myEvent.PublishAsync();
 ```
 
@@ -60,14 +63,14 @@ await myEvent.PublishAsync();
 ```csharp
 using ByteAether.WeakEvent;
 
-// Create an instance of the weak event with event data
+// Create an event with payload data.
 var myEvent = new WeakEvent<MyEventData>();
 
-// Create a subscriber and subscribe
+// Create and subscribe a handler.
 var subscriber = (MyEventData data) => Console.WriteLine("Received: " + data.Message);
 myEvent.Subscribe(subscriber);
 
-// Raise the event
+// Publish the event.
 await myEvent.PublishAsync(new MyEventData("Hello, World!"));
 
 // Define your event data
@@ -78,28 +81,28 @@ public record MyEventData(string Message);
 
 ### `WeakEvent`
  * `SubscriberCount`\
-   Number of alive subscribers currently registered to the event.
+   Number of live subscribers currently registered.
  * `Subscribe(Action handler)`\
    `Subscribe(Func<Task> handler)`\
    `Subscribe(Func<CancellationToken, Task> handler)`\
-   Subscribes the specified handler to the event. A multicast delegate subscribes each invocation. The handlers will be invoked when the event is raised, provided that their targets are still alive.
+   Subscribes the handler. Each invocation in a multicast delegate is subscribed independently. Live handlers are invoked when the event is published.
  * `Unsubscribe(Action handler)`\
    `Unsubscribe(Func<Task> handler)`\
    `Unsubscribe(Func<CancellationToken, Task> handler)`\
-   Unsubscribes the specified handler from the event. A multicast delegate unsubscribes all matching invocations.
+   Unsubscribes the handler and returns whether at least one matching invocation was removed. A multicast delegate unsubscribes all matching invocations.
  * `PublishAsync(CancellationToken cancellationToken = default)`\
-   Raises the event by invoking all live subscribers. Dead subscribers (whose targets have been garbage-collected) are removed.
+   Invokes live subscribers sequentially and removes dead subscribers.
 
 ### `WeakEvent<TEvent>`
  * `SubscriberCount`\
-   Number of alive subscribers currently registered to the event.
+   Number of live subscribers currently registered.
  * `Subscribe(Action<TEvent> handler)`\
    `Subscribe(Func<TEvent, Task> handler)`\
    `Subscribe(Func<TEvent, CancellationToken, Task> handler)`\
-   Subscribes the specified handler to the event. A multicast delegate subscribes each invocation. The handlers will be invoked when the event is raised, provided that their targets are still alive.
+   Subscribes the handler. Each invocation in a multicast delegate is subscribed independently. Live handlers are invoked when the event is published.
  * `Unsubscribe(Action<TEvent> handler)`\
    `Unsubscribe(Func<TEvent, Task> handler)`\
    `Unsubscribe(Func<TEvent, CancellationToken, Task> handler)`\
-   Unsubscribes the specified handler from the event. A multicast delegate unsubscribes all matching invocations.
+   Unsubscribes the handler and returns whether at least one matching invocation was removed. A multicast delegate unsubscribes all matching invocations.
  * `PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)`\
-   Raises the event by invoking all live subscribers with the provided event data. Dead subscribers (whose targets have been garbage-collected) are removed.
+   Invokes live subscribers sequentially with `eventData` and removes dead subscribers.
