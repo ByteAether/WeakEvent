@@ -152,6 +152,26 @@ public class WeakEventGenericTests
 	}
 
 	[Fact]
+	public async Task Subscribe_MulticastHandler_SubscribesAndUnsubscribesAllInvocations()
+	{
+		var weakEvent = new WeakEvent<string>();
+		var invocationCount = 0;
+		Action<string> firstHandler = _ => invocationCount++;
+		Action<string> secondHandler = _ => invocationCount++;
+		Action<string> combinedHandler = firstHandler + secondHandler;
+
+		weakEvent.Subscribe(combinedHandler);
+		Assert.Equal(2, weakEvent.SubscriberCount);
+
+		await weakEvent.PublishAsync("Test event");
+		Assert.Equal(2, invocationCount);
+
+		Assert.True(weakEvent.Unsubscribe(combinedHandler));
+		await weakEvent.PublishAsync("Test event");
+		Assert.Equal(2, invocationCount);
+	}
+
+	[Fact]
 	public async Task PublishAsync_SynchronousHandlerException_IsNotWrapped()
 	{
 		var weakEvent = new WeakEvent<string>();
