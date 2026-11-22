@@ -3,13 +3,13 @@
 public class WeakEventHandlerTests
 {
 	[Fact]
-	public void Constructor_NullDelegate_ThrowsException()
+	public void Create_NullDelegate_ThrowsException()
 	{
 		// Arrange
 		Action handler = null!;
 
 		// Act & Assert
-		Assert.Throws<NullReferenceException>(() => new WeakEventHandler(handler));
+		Assert.Throws<ArgumentNullException>(() => WeakEventHandler.Create(handler));
 	}
 
 	[Fact]
@@ -17,10 +17,10 @@ public class WeakEventHandlerTests
 	{
 		// Arrange
 		_staticInvoked = false;
-		var weakHandler = new WeakEventHandler(StaticHandler);
+		var weakHandler = WeakEventHandler.Create(StaticHandler);
 
 		// Act
-		await weakHandler.InvokeAsync([]);
+		await weakHandler.InvokeAsync(null);
 
 		// Assert
 		Assert.True(_staticInvoked);
@@ -35,10 +35,10 @@ public class WeakEventHandlerTests
 	{
 		// Arrange
 		var subscriber = new Subscriber();
-		var weakHandler = new WeakEventHandler(subscriber.InstanceHandler);
+		var weakHandler = WeakEventHandler.Create(subscriber.InstanceHandler);
 
 		// Act
-		await weakHandler.InvokeAsync([]);
+		await weakHandler.InvokeAsync(null);
 
 		// Assert
 		Assert.True(subscriber.Invoked);
@@ -50,10 +50,10 @@ public class WeakEventHandlerTests
 	{
 		// Arrange
 		var subscriber = new Subscriber();
-		var weakHandler = new WeakEventHandler(subscriber.AsyncHandler);
+		var weakHandler = WeakEventHandler.Create(subscriber.AsyncHandler);
 
 		// Act
-		await weakHandler.InvokeAsync([]);
+		await weakHandler.InvokeAsync(null);
 
 		// Assert
 		Assert.True(subscriber.Invoked);
@@ -65,7 +65,7 @@ public class WeakEventHandlerTests
 	{
 		// Arrange
 		var subscriber = new Subscriber();
-		var weakHandler = new WeakEventHandler(subscriber.InstanceHandler);
+		var weakHandler = WeakEventHandler.Create(subscriber.InstanceHandler);
 
 		// Act
 		var result = weakHandler.Matches(subscriber.InstanceHandler);
@@ -80,7 +80,7 @@ public class WeakEventHandlerTests
 		// Arrange
 		var subscriber1 = new Subscriber();
 		var subscriber2 = new Subscriber();
-		var weakHandler = new WeakEventHandler(subscriber1.InstanceHandler);
+		var weakHandler = WeakEventHandler.Create(subscriber1.InstanceHandler);
 
 		// Act
 		var result = weakHandler.Matches(subscriber2.InstanceHandler);
@@ -100,7 +100,7 @@ public class WeakEventHandlerTests
 		GC.WaitForPendingFinalizers();
 
 		var isAliveBefore = weakHandler.IsAlive;
-		await weakHandler.InvokeAsync([]);
+		await weakHandler.InvokeAsync(null);
 
 		// Assert
 		Assert.False(isAliveBefore);
@@ -112,7 +112,7 @@ public class WeakEventHandlerTests
 		{
 			ThrowIfInvoked = true
 		};
-		return new WeakEventHandler(subscriber.InstanceHandler);
+		return WeakEventHandler.Create(subscriber.InstanceHandler);
 		// 'subscriber' goes out of scope after this method.
 	}
 
