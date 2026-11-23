@@ -9,8 +9,15 @@
 /// For more information, visit <see href="https://github.com/ByteAether/WeakEvent">the GitHub repository</see>.
 /// </remarks>
 /// <typeparam name="TEvent">The type of the event argument.</typeparam>
-public class WeakEvent<TEvent> : WeakEventBase
+public class WeakEvent<TEvent>
 {
+	private readonly WeakEventCore _core = new();
+
+	/// <summary>
+	/// Number of living subscribers currently registered to the event.
+	/// </summary>
+	public int SubscriberCount => _core.SubscriberCount;
+
 	/// <summary>
 	/// Subscribes the specified handler to the event.
 	/// </summary>
@@ -19,7 +26,7 @@ public class WeakEvent<TEvent> : WeakEventBase
 	/// provided that the target is still alive.
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Subscribe(Action<TEvent> handler) => base.SubscribeCore(handler);
+	public void Subscribe(Action<TEvent> handler) => _core.Subscribe(handler, WeakEventHandler.Create);
 
 	/// <summary>
 	/// Subscribes the specified async handler to the event.
@@ -29,7 +36,7 @@ public class WeakEvent<TEvent> : WeakEventBase
 	/// provided that the target is still alive.
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Subscribe(Func<TEvent, Task> handler) => base.SubscribeCore(handler);
+	public void Subscribe(Func<TEvent, Task> handler) => _core.Subscribe(handler, WeakEventHandler.Create);
 
 	/// <summary>
 	/// Subscribes the specified async handler with a cancellation token to the event.
@@ -39,28 +46,29 @@ public class WeakEvent<TEvent> : WeakEventBase
 	/// provided that the target is still alive.
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Subscribe(Func<TEvent, CancellationToken, Task> handler) => base.SubscribeCore(handler);
+	public void Subscribe(Func<TEvent, CancellationToken, Task> handler)
+		=> _core.Subscribe(handler, WeakEventHandler.Create);
 
 	/// <summary>
 	/// Unsubscribes the specified handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public bool Unsubscribe(Action<TEvent> handler) => base.Unsubscribe(handler);
+	public bool Unsubscribe(Action<TEvent> handler) => _core.Unsubscribe(handler);
 
 	/// <summary>
 	/// Unsubscribes the specified async handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public bool Unsubscribe(Func<TEvent, Task> handler) => base.Unsubscribe(handler);
+	public bool Unsubscribe(Func<TEvent, Task> handler) => _core.Unsubscribe(handler);
 
 	/// <summary>
 	/// Unsubscribes the specified async handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public bool Unsubscribe(Func<TEvent, CancellationToken, Task> handler) => base.Unsubscribe(handler);
+	public bool Unsubscribe(Func<TEvent, CancellationToken, Task> handler) => _core.Unsubscribe(handler);
 
 	/// <summary>
 	/// Raises the event, invoking all live subscribers with the provided event data.
@@ -70,7 +78,7 @@ public class WeakEvent<TEvent> : WeakEventBase
 	/// <param name="eventData">The event data to publish to the subscribers.</param>
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
 	public Task PublishAsync(TEvent eventData, CancellationToken cancellationToken = default)
-		=> base.PublishAsync(eventData, cancellationToken);
+		=> _core.PublishAsync(eventData, cancellationToken);
 }
 
 /// <summary>
@@ -81,8 +89,15 @@ public class WeakEvent<TEvent> : WeakEventBase
 /// Weakly referenced event subscribers. Keep your .NET events lean and memory-safe.
 /// For more information, visit <see href="https://github.com/ByteAether/WeakEvent">the GitHub repository</see>.
 /// </remarks>
-public class WeakEvent : WeakEventBase
+public class WeakEvent
 {
+	private readonly WeakEventCore _core = new();
+
+	/// <summary>
+	/// Number of living subscribers currently registered to the event.
+	/// </summary>
+	public int SubscriberCount => _core.SubscriberCount;
+
 	/// <summary>
 	/// Subscribes the specified handler to the event.
 	/// </summary>
@@ -91,7 +106,7 @@ public class WeakEvent : WeakEventBase
 	/// provided that the target is still alive.
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Subscribe(Action handler) => base.SubscribeCore(handler);
+	public void Subscribe(Action handler) => _core.Subscribe(handler, WeakEventHandler.Create);
 
 	/// <summary>
 	/// Subscribes the specified async handler to the event.
@@ -101,7 +116,7 @@ public class WeakEvent : WeakEventBase
 	/// provided that the target is still alive.
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Subscribe(Func<Task> handler) => base.SubscribeCore(handler);
+	public void Subscribe(Func<Task> handler) => _core.Subscribe(handler, WeakEventHandler.Create);
 
 	/// <summary>
 	/// Subscribes the specified async handler with a cancellation token to the event.
@@ -111,28 +126,29 @@ public class WeakEvent : WeakEventBase
 	/// provided that the target is still alive.
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public void Subscribe(Func<CancellationToken, Task> handler) => base.SubscribeCore(handler);
+	public void Subscribe(Func<CancellationToken, Task> handler)
+		=> _core.Subscribe(handler, WeakEventHandler.Create);
 
 	/// <summary>
 	/// Unsubscribes the specified handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public bool Unsubscribe(Action handler) => base.Unsubscribe(handler);
+	public bool Unsubscribe(Action handler) => _core.Unsubscribe(handler);
 
 	/// <summary>
 	/// Unsubscribes the specified async handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public bool Unsubscribe(Func<Task> handler) => base.Unsubscribe(handler);
+	public bool Unsubscribe(Func<Task> handler) => _core.Unsubscribe(handler);
 
 	/// <summary>
 	/// Unsubscribes the specified async handler from the event.
 	/// </summary>
 	/// <param name="handler">The handler to unsubscribe.</param>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	public bool Unsubscribe(Func<CancellationToken, Task> handler) => base.Unsubscribe(handler);
+	public bool Unsubscribe(Func<CancellationToken, Task> handler) => _core.Unsubscribe(handler);
 
 	/// <summary>
 	/// Raises the event, invoking all live subscribers with the provided event data.
@@ -141,177 +157,5 @@ public class WeakEvent : WeakEventBase
 	/// </summary>
 	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
 	public Task PublishAsync(CancellationToken cancellationToken = default)
-		=> base.PublishAsync(null, cancellationToken);
-}
-
-/// <summary>
-/// Represents a weak event that stores its subscribers using weak references.
-/// Subscribers register a <see cref="Delegate"/> and when an event is raised, only those whose target is still alive will be invoked.
-/// </summary>
-public abstract class WeakEventBase
-{
-	private readonly List<WeakEventHandler> _handlers = [];
-	private readonly ReaderWriterLockSlim _rwLock = new();
-
-	/// <summary>
-	/// Number of living subscribers currently registered to the event.
-	/// </summary>
-	public int SubscriberCount
-	{
-		get
-		{
-			_rwLock.EnterReadLock();
-			try
-			{
-				return _handlers.Count(x => x.IsAlive);
-			}
-			finally
-			{
-				_rwLock.ExitReadLock();
-			}
-		}
-	}
-
-	/// <summary>
-	/// Subscribes the specified delegate handler to the event.
-	/// </summary>
-	/// <param name="handler">
-	/// The handler to subscribe. It will be invoked when the event is raised,
-	/// provided that the target is still alive.
-	/// </param>
-	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	protected void SubscribeCore(Action handler)
-		=> AddHandlers(handler, WeakEventHandler.Create);
-
-	/// <summary>
-	/// Subscribes the specified delegate handler to the event.
-	/// </summary>
-	protected void SubscribeCore<TEvent>(Action<TEvent> handler)
-		=> AddHandlers(handler, WeakEventHandler.Create);
-
-	/// <summary>
-	/// Subscribes the specified delegate handler to the event.
-	/// </summary>
-	protected void SubscribeCore(Func<Task> handler)
-		=> AddHandlers(handler, WeakEventHandler.Create);
-
-	/// <summary>
-	/// Subscribes the specified delegate handler to the event.
-	/// </summary>
-	protected void SubscribeCore<TEvent>(Func<TEvent, Task> handler)
-		=> AddHandlers(handler, WeakEventHandler.Create);
-
-	/// <summary>
-	/// Subscribes the specified delegate handler to the event.
-	/// </summary>
-	protected void SubscribeCore(Func<CancellationToken, Task> handler)
-		=> AddHandlers(handler, WeakEventHandler.Create);
-
-	/// <summary>
-	/// Subscribes the specified delegate handler to the event.
-	/// </summary>
-	protected void SubscribeCore<TEvent>(Func<TEvent, CancellationToken, Task> handler)
-		=> AddHandlers(handler, WeakEventHandler.Create);
-
-	private void AddHandlers<TDelegate>(
-		TDelegate handler,
-		Func<TDelegate, WeakEventHandler> createHandler
-	)
-		where TDelegate : Delegate
-	{
-		if (handler is null)
-		{
-			throw new ArgumentNullException(nameof(handler));
-		}
-
-		var handlers = handler
-			.GetInvocationList()
-			.Select(invocation => createHandler((TDelegate)invocation))
-			.ToArray();
-
-		_rwLock.EnterWriteLock();
-		try
-		{
-			_handlers.AddRange(handlers);
-		}
-		finally
-		{
-			_rwLock.ExitWriteLock();
-		}
-	}
-
-	/// <summary>
-	/// Unsubscribes the specified delegate handler from the event.
-	/// </summary>
-	/// <param name="handler">The handler to unsubscribe.</param>
-	/// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
-	protected bool Unsubscribe(Delegate handler)
-	{
-		if (handler is null)
-		{
-			throw new ArgumentNullException(nameof(handler));
-		}
-
-		var handlers = handler.GetInvocationList();
-
-		_rwLock.EnterWriteLock();
-		try
-		{
-			return _handlers.RemoveAll(
-				weakHandler => handlers.Any(weakHandler.Matches)
-			) > 0;
-		}
-		finally
-		{
-			_rwLock.ExitWriteLock();
-		}
-	}
-
-	/// <summary>
-	/// Raises the event, invoking all live subscribers with the provided event data.
-	/// Dead subscribers (whose targets have been garbage-collected) are removed.
-	/// Subscribers are invoked sequentially from a snapshot captured when publication starts.
-	/// Cancellation is observed before each subscriber is invoked.
-	/// </summary>
-	/// <param name="eventData">Event data passed to each data-taking delegate.</param>
-	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	protected async Task PublishAsync(
-		object? eventData,
-		CancellationToken cancellationToken = default
-	)
-	{
-		List<WeakEventHandler> handlers;
-
-		_rwLock.EnterUpgradeableReadLock();
-
-		try
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-
-			if (_handlers.Any(x => !x.IsAlive))
-			{
-				_rwLock.EnterWriteLock();
-				try
-				{
-					_handlers.RemoveAll(x => !x.IsAlive);
-				}
-				finally
-				{
-					_rwLock.ExitWriteLock();
-				}
-			}
-
-			handlers = [.. _handlers];
-		}
-		finally
-		{
-			_rwLock.ExitUpgradeableReadLock();
-		}
-
-		foreach (var handler in handlers)
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-			await handler.InvokeAsync(eventData, cancellationToken);
-		}
-	}
+		=> _core.PublishAsync<object?>(null, cancellationToken);
 }
