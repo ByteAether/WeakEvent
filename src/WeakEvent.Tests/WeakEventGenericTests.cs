@@ -252,7 +252,7 @@ public class WeakEventGenericTests
 		Assert.Equal(1, subscriber.CallCount);
 	}
 
-	private class OpenInstanceSubscriber
+	private sealed class OpenInstanceSubscriber
 	{
 		public int CallCount { get; private set; }
 
@@ -287,7 +287,7 @@ public class WeakEventGenericTests
 		}
 	}
 
-	private class GenericSubscriber(Action onEvent)
+	private sealed class GenericSubscriber(Action onEvent)
 	{
 		private readonly Action _onEvent = onEvent;
 

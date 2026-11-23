@@ -115,7 +115,7 @@ public class WeakEventHandlerTests
 		// 'subscriber' goes out of scope after this method.
 	}
 
-	private class Subscriber
+	private sealed class Subscriber
 	{
 		public bool Invoked { get; private set; }
 		public bool ThrowIfInvoked { get; init; }

@@ -9,6 +9,7 @@ internal sealed class WeakEventCore
 	{
 		get
 		{
+			// ReSharper disable once InconsistentlySynchronizedField
 			var handlers = Volatile.Read(ref _handlers);
 			var count = 0;
 
@@ -115,6 +116,7 @@ internal sealed class WeakEventCore
 
 	private WeakEventHandler[] GetLiveSnapshot()
 	{
+		// ReSharper disable once InconsistentlySynchronizedField
 		var handlers = Volatile.Read(ref _handlers);
 		var liveCount = 0;
 

@@ -187,7 +187,7 @@ public class WeakEventNonGenericTests
 		}
 	}
 
-	private class NonGenericSubscriber(Action onEvent)
+	private sealed class NonGenericSubscriber(Action onEvent)
 	{
 		private readonly Action _onEvent = onEvent;
 

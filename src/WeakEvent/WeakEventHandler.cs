@@ -37,7 +37,7 @@ internal readonly struct WeakEventHandler
 			handler,
 			(invoke, eventData, _) =>
 			{
-				invoke((TEvent)eventData!);
+				invoke(eventData);
 				return Task.CompletedTask;
 			}
 		);
@@ -51,7 +51,7 @@ internal readonly struct WeakEventHandler
 	public static WeakEventHandler Create<TEvent>(Func<TEvent, Task> handler)
 		=> Create<Func<TEvent, Task>, TEvent>(
 			handler,
-			(invoke, eventData, _) => RequireTask(invoke((TEvent)eventData!))
+			(invoke, eventData, _) => RequireTask(invoke(eventData))
 		);
 
 	public static WeakEventHandler Create(Func<CancellationToken, Task> handler)
@@ -64,7 +64,7 @@ internal readonly struct WeakEventHandler
 		=> Create<Func<TEvent, CancellationToken, Task>, TEvent>(
 			handler,
 			(invoke, eventData, cancellationToken) =>
-				RequireTask(invoke((TEvent)eventData!, cancellationToken))
+				RequireTask(invoke(eventData, cancellationToken))
 		);
 
 	public Task InvokeAsync(object? eventData, CancellationToken cancellationToken = default)
@@ -111,10 +111,8 @@ internal readonly struct WeakEventHandler
 
 		return CreateHandler(
 			handler,
-			(Func<object?, TEvent, CancellationToken, Task>)(
-				(target, eventData, cancellationToken) =>
-					invoke(GetDelegate<TDelegate>(method, target), eventData, cancellationToken)
-			)
+			(object? target, TEvent eventData, CancellationToken cancellationToken) =>
+				invoke(GetDelegate<TDelegate>(method, target), eventData, cancellationToken)
 		);
 	}
 
@@ -125,10 +123,8 @@ internal readonly struct WeakEventHandler
 		where TDelegate : Delegate
 		=> CreateHandler(
 			handler,
-			(Func<object?, TEvent, CancellationToken, Task>)(
-				(_, eventData, cancellationToken) =>
-					invoke(handler, eventData, cancellationToken)
-			)
+			(object? _, TEvent eventData, CancellationToken cancellationToken) =>
+				invoke(handler, eventData, cancellationToken)
 		);
 
 	private static WeakEventHandler CreateHandler<TEvent>(
@@ -152,4 +148,4 @@ internal readonly struct WeakEventHandler
 			throw new ArgumentNullException(nameof(handler));
 		}
 	}
-}
+}
