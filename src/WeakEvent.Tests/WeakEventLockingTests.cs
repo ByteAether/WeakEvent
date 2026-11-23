@@ -36,7 +36,10 @@ public class WeakEventLockingTests(ITestOutputHelper output)
 			callCount++;
 		}
 
-		void secondHandler() => callCount++;
+		void secondHandler()
+		{
+			callCount++;
+		}
 
 		e.Subscribe(firstHandler);
 		var firstPublication = e.PublishAsync();
@@ -51,5 +54,4 @@ public class WeakEventLockingTests(ITestOutputHelper output)
 		await e.PublishAsync();
 		Assert.Equal(3, callCount);
 	}
-
 }
