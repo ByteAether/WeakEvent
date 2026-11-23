@@ -2,22 +2,25 @@ namespace ByteAether.WeakEvent;
 
 internal sealed class WeakEventCore
 {
-	private readonly List<WeakEventHandler> _handlers = [];
-	private readonly ReaderWriterLockSlim _rwLock = new();
+	private readonly object _sync = new();
+	private WeakEventHandler[] _handlers = [];
 
 	public int SubscriberCount
 	{
 		get
 		{
-			_rwLock.EnterReadLock();
-			try
+			var handlers = Volatile.Read(ref _handlers);
+			var count = 0;
+
+			foreach (var handler in handlers)
 			{
-				return _handlers.Count(x => x.IsAlive);
+				if (handler.IsAlive)
+				{
+					count++;
+				}
 			}
-			finally
-			{
-				_rwLock.ExitReadLock();
-			}
+
+			return count;
 		}
 	}
 
@@ -32,19 +35,20 @@ internal sealed class WeakEventCore
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		var handlers = handler
-			.GetInvocationList()
-			.Select(invocation => createHandler((TDelegate)invocation))
-			.ToArray();
+		var invocations = handler.GetInvocationList();
+		var handlers = new WeakEventHandler[invocations.Length];
 
-		_rwLock.EnterWriteLock();
-		try
+		for (var i = 0; i < invocations.Length; i++)
 		{
-			_handlers.AddRange(handlers);
+			handlers[i] = createHandler((TDelegate)invocations[i]);
 		}
-		finally
+
+		lock (_sync)
 		{
-			_rwLock.ExitWriteLock();
+			var combined = new WeakEventHandler[_handlers.Length + handlers.Length];
+			_handlers.CopyTo(combined, 0);
+			handlers.CopyTo(combined, _handlers.Length);
+			Volatile.Write(ref _handlers, combined);
 		}
 	}
 
@@ -55,18 +59,41 @@ internal sealed class WeakEventCore
 			throw new ArgumentNullException(nameof(handler));
 		}
 
-		var handlers = handler.GetInvocationList();
+		var invocations = handler.GetInvocationList();
 
-		_rwLock.EnterWriteLock();
-		try
+		lock (_sync)
 		{
-			return _handlers.RemoveAll(
-				weakHandler => handlers.Any(weakHandler.Matches)
-			) > 0;
-		}
-		finally
-		{
-			_rwLock.ExitWriteLock();
+			var handlers = _handlers;
+			var remaining = new WeakEventHandler[handlers.Length];
+			var count = 0;
+
+			foreach (var weakHandler in handlers)
+			{
+				var remove = false;
+
+				foreach (var invocation in invocations)
+				{
+					if (weakHandler.Matches(invocation))
+					{
+						remove = true;
+						break;
+					}
+				}
+
+				if (!remove)
+				{
+					remaining[count++] = weakHandler;
+				}
+			}
+
+			if (count == handlers.Length)
+			{
+				return false;
+			}
+
+			Array.Resize(ref remaining, count);
+			Volatile.Write(ref _handlers, remaining);
+			return true;
 		}
 	}
 
@@ -75,38 +102,59 @@ internal sealed class WeakEventCore
 		CancellationToken cancellationToken = default
 	)
 	{
-		List<WeakEventHandler> handlers;
+		cancellationToken.ThrowIfCancellationRequested();
 
-		_rwLock.EnterUpgradeableReadLock();
-
-		try
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-
-			if (_handlers.Any(x => !x.IsAlive))
-			{
-				_rwLock.EnterWriteLock();
-				try
-				{
-					_handlers.RemoveAll(x => !x.IsAlive);
-				}
-				finally
-				{
-					_rwLock.ExitWriteLock();
-				}
-			}
-
-			handlers = [.. _handlers];
-		}
-		finally
-		{
-			_rwLock.ExitUpgradeableReadLock();
-		}
+		var handlers = GetLiveSnapshot();
 
 		foreach (var handler in handlers)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			await handler.InvokeAsync(eventData, cancellationToken);
 		}
+	}
+
+	private WeakEventHandler[] GetLiveSnapshot()
+	{
+		var handlers = Volatile.Read(ref _handlers);
+		var liveCount = 0;
+
+		foreach (var handler in handlers)
+		{
+			if (handler.IsAlive)
+			{
+				liveCount++;
+			}
+		}
+
+		if (liveCount == handlers.Length)
+		{
+			return handlers;
+		}
+
+		var liveHandlers = new WeakEventHandler[liveCount];
+		var index = 0;
+
+		foreach (var handler in handlers)
+		{
+			if (handler.IsAlive)
+			{
+				liveHandlers[index++] = handler;
+			}
+		}
+
+		if (index < liveHandlers.Length)
+		{
+			Array.Resize(ref liveHandlers, index);
+		}
+
+		lock (_sync)
+		{
+			if (ReferenceEquals(_handlers, handlers))
+			{
+				Volatile.Write(ref _handlers, liveHandlers);
+			}
+		}
+
+		return liveHandlers;
 	}
 }
